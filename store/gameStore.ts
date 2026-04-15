@@ -1,10 +1,10 @@
 import { create } from "zustand";
 import { ALL_PLAYERS, QUESTIONS, PRIZE_LADDER } from "@/data/mockData";
 
-export type Phase = "wheel" | "selection" | "game";
+export type Phase = "idle" | "spinning" | "selected" | "quiz" | "done";
 
 export const SPIN_DURATION = 4200;
-const SPIN_BUFFER = 900; // extra time after wheel stops before state updates
+const SPIN_BUFFER = 900;
 
 const MIN_EXTRA_SPINS = 5;
 const WHEEL_SEGMENT_COUNT = 16;
@@ -31,25 +31,24 @@ export interface GameData {
 
   // Players
   allPlayers: string[];
-  selectedPlayers: string[]; // 5 players chosen by the wheel
+  selectedPlayers: string[];
   eliminated: string[];
   currentContestant: string | null;
 
-  // Wheel phase
-  wheelPlayers: string[]; // fixed decorative segments on the wheel
-  wheelRotation: number; // resting rotation after last completed spin
-  wheelTargetRotation: number; // target for the current / latest spin
-  wheelSpinning: boolean; // true while CSS transition is in flight
-  spinRound: number; // 0 = no spins done yet; 5 = all done
+  // Wheel
+  wheelPlayers: string[]; // fixed decorative segments
+  wheelRotation: number;
+  wheelTargetRotation: number;
+  spinRound: number;
 
-  // Quiz phase
+  // Quiz
   currentQuestionIndex: number;
   revealAnswer: boolean;
   currentLevel: number;
 
   // Lifelines
   usedLifelines: string[];
-  hiddenAnswers: number[]; // answer indices hidden by 50:50
+  hiddenAnswers: number[];
 
   // End state
   gameOver: boolean;
@@ -64,12 +63,12 @@ export interface GameData {
 
 interface GameActions {
   spinOnce: () => void;
-  goToSelection: () => void;
-  selectContestant: (name: string) => void;
-  startGame: () => void;
-  revealCurrentAnswer: () => void;
+  startQuiz: () => void;
+  nextPlayer: () => void;
+  correctAnswer: () => void;
   nextQuestion: () => void;
   eliminateContestant: () => void;
+  revealCurrentAnswer: () => void;
   useLifeline5050: () => void;
   useLifelineSkip: () => void;
   useLifelineColleague: () => void;
@@ -84,7 +83,7 @@ export type GameStore = GameData & GameActions;
 // ── Initial state ─────────────────────────────────────────────────────────────
 
 const initialData: GameData = {
-  phase: "wheel",
+  phase: "idle",
   allPlayers: ALL_PLAYERS,
   selectedPlayers: [],
   eliminated: [],
@@ -93,7 +92,6 @@ const initialData: GameData = {
   wheelPlayers: WHEEL_SEGMENTS,
   wheelRotation: 0,
   wheelTargetRotation: 0,
-  wheelSpinning: false,
   spinRound: 0,
 
   currentQuestionIndex: 0,
@@ -116,70 +114,61 @@ const initialData: GameData = {
 export const useGameStore = create<GameStore>((set, get) => ({
   ...initialData,
 
-  // ── Wheel phase ─────────────────────────────────────────────────────────────
+  // ── Wheel ────────────────────────────────────────────────────────────────────
 
   spinOnce: () => {
     const state = get();
-    if (state.wheelSpinning) return; // already spinning
-    if (state.spinRound >= 5) return; // all 5 players chosen
+    if (state.phase !== "idle") return;
 
-    // Spin to a random decorative segment (purely visual)
     const n = WHEEL_SEGMENT_COUNT;
     const targetIndex = Math.floor(Math.random() * n);
     const targetRot = calcTargetRotation(targetIndex, n, state.wheelRotation);
 
-    set({
-      wheelSpinning: true,
-      wheelTargetRotation: targetRot,
-    });
+    set({ phase: "spinning", wheelTargetRotation: targetRot });
 
-    // After the animation + buffer: pick a random unselected real player
     setTimeout(() => {
       const curr = get();
 
       const remaining = curr.allPlayers.filter(
         (p) => !curr.selectedPlayers.includes(p),
       );
+      if (remaining.length === 0) return;
       const selectedPlayer =
         remaining[Math.floor(Math.random() * remaining.length)];
 
       set({
-        wheelSpinning: false,
-        wheelRotation: targetRot, // persist resting position
-        // wheelPlayers is never mutated — segments stay fixed
+        phase: "selected",
+        wheelRotation: targetRot,
+        currentContestant: selectedPlayer,
         selectedPlayers: [...curr.selectedPlayers, selectedPlayer],
         spinRound: curr.spinRound + 1,
       });
     }, SPIN_DURATION + SPIN_BUFFER);
   },
 
-  goToSelection: () => set({ phase: "selection" }),
+  // ── selected → quiz ──────────────────────────────────────────────────────────
 
-  // ── Selection phase ──────────────────────────────────────────────────────────
-
-  selectContestant: (name) => set({ currentContestant: name }),
-
-  startGame: () =>
+  startQuiz: () =>
     set({
-      phase: "game",
-      currentQuestionIndex: 0,
-      currentLevel: 0,
+      phase: "quiz",
       revealAnswer: false,
       usedLifelines: [],
       hiddenAnswers: [],
       gameOver: false,
       winner: null,
+      playerAnswer: null,
     }),
 
-  // ── Quiz phase ───────────────────────────────────────────────────────────────
+  // ── quiz actions ─────────────────────────────────────────────────────────────
 
   revealCurrentAnswer: () => set({ revealAnswer: true }),
 
-  nextQuestion: () => {
+  /** Player answered correctly — advance level then go to done. */
+  correctAnswer: () => {
     const { currentLevel, currentContestant } = get();
     const next = currentLevel + 1;
     if (next >= PRIZE_LADDER.length || next >= QUESTIONS.length) {
-      set({ gameOver: true, winner: currentContestant });
+      set({ gameOver: true, winner: currentContestant, phase: "done" });
       return;
     }
     set({
@@ -188,6 +177,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
       revealAnswer: false,
       hiddenAnswers: [],
       playerAnswer: null,
+      phase: "done",
+    });
+  },
+
+  nextQuestion: () => {
+    const { currentLevel, currentContestant } = get();
+    const next = currentLevel + 1;
+    if (next >= PRIZE_LADDER.length || next >= QUESTIONS.length) {
+      // Last question answered correctly — contestant wins
+      set({ winner: currentContestant, phase: "done" });
+      return;
+    }
+    // More questions remain — stay in quiz
+    set({
+      currentQuestionIndex: next,
+      currentLevel: next,
+      revealAnswer: false,
+      hiddenAnswers: [],
+      playerAnswer: null,
+      phase: "quiz",
     });
   },
 
@@ -196,13 +205,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!currentContestant) return;
     set({
       eliminated: [...eliminated, currentContestant],
-      currentContestant: null,
+      winner: null,
       revealAnswer: false,
       hiddenAnswers: [],
       playerAnswer: null,
-      phase: "selection",
+      phase: "done",
     });
   },
+
+  // ── done → idle ──────────────────────────────────────────────────────────────
+
+  nextPlayer: () =>
+    set({
+      phase: "idle",
+      currentContestant: null,
+      playerAnswer: null,
+      revealAnswer: false,
+    }),
 
   // ── Lifelines ────────────────────────────────────────────────────────────────
 
@@ -219,7 +238,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     });
   },
 
-  // Skip and Ask-Colleague are UI-only for MVP: just mark as used
   useLifelineSkip: () => {
     const { usedLifelines } = get();
     if (usedLifelines.includes("skip")) return;
@@ -240,6 +258,5 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   resetGame: () => set(initialData),
 
-  /** Called by BroadcastChannel on the screen tab to hydrate state. */
   syncState: (data: GameData) => set(data),
 }));

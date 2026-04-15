@@ -17,7 +17,6 @@ export default function AdminPage() {
     currentQuestionIndex,
     revealAnswer,
     currentLevel,
-    wheelSpinning,
     spinRound,
     usedLifelines,
     gameOver,
@@ -26,13 +25,12 @@ export default function AdminPage() {
     playerAnswer,
     spinOnce,
     showScreen,
-    selectPlayerAnswer,
-    goToSelection,
-    selectContestant,
-    startGame,
-    revealCurrentAnswer,
+    startQuiz,
+    nextPlayer,
     nextQuestion,
     eliminateContestant,
+    revealCurrentAnswer,
+    selectPlayerAnswer,
     useLifeline5050,
     useLifelineSkip,
     useLifelineColleague,
@@ -40,28 +38,27 @@ export default function AdminPage() {
   } = useGameStore();
 
   const question = QUESTIONS[currentQuestionIndex];
-  const activePlayers = selectedPlayers.filter((p) => !eliminated.includes(p));
-  const allDone = spinRound >= 5; // all 5 wheel spins completed
-  const canSpin = !wheelSpinning && !allDone;
+
+  // ── Phase badge colour ────────────────────────────────────────────────────────
+  const phaseBadge: Record<string, string> = {
+    idle:     "bg-blue-800 text-blue-200",
+    spinning: "bg-yellow-800 text-yellow-200",
+    selected: "bg-purple-800 text-purple-200",
+    quiz:     "bg-green-800 text-green-200",
+    done:     "bg-gray-700 text-gray-200",
+  };
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-xl mx-auto p-5 space-y-4">
+
         {/* ── Header ─────────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between py-2">
           <h1 className="text-xl font-bold text-yellow-400 tracking-wide">
             🎮 Admin Panel
           </h1>
           <div className="flex items-center gap-2">
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${
-                phase === "wheel"
-                  ? "bg-blue-800 text-blue-200"
-                  : phase === "selection"
-                    ? "bg-purple-800 text-purple-200"
-                    : "bg-green-800 text-green-200"
-              }`}
-            >
+            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${phaseBadge[phase] ?? "bg-gray-700 text-gray-200"}`}>
               {phase}
             </span>
             <a
@@ -82,38 +79,21 @@ export default function AdminPage() {
         </div>
 
         {/* ════════════════════════════════════════════════════════════════════
-            PHASE 1 — WHEEL
+            IDLE — spin to pick next contestant
         ════════════════════════════════════════════════════════════════════ */}
-        {phase === "wheel" && (
+        {phase === "idle" && (
           <section className="bg-gray-900 rounded-2xl p-5 space-y-4 border border-gray-800">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-semibold text-blue-400 uppercase tracking-wider">
-                Step 1 — Spin the Wheel
+                Spin the Wheel
               </h2>
               <span className="text-sm text-gray-400 font-mono">
-                Round <span className="text-white font-bold">{spinRound}</span>
-                {" / "}
-                <span className="text-yellow-400 font-bold">5</span>
+                Round{" "}
+                <span className="text-white font-bold">{spinRound + 1}</span>
               </span>
             </div>
 
-            {/* Spin progress dots */}
-            <div className="flex gap-2 justify-center py-1">
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className={`w-4 h-4 rounded-full border-2 transition-all ${
-                    i < spinRound
-                      ? "bg-yellow-400 border-yellow-400"
-                      : i === spinRound && wheelSpinning
-                        ? "bg-yellow-400/40 border-yellow-400 animate-pulse"
-                        : "bg-transparent border-gray-600"
-                  }`}
-                />
-              ))}
-            </div>
-
-            {/* Show Screen button */}
+            {/* Show Screen */}
             <button
               onClick={showScreen}
               disabled={screenVisible}
@@ -126,26 +106,15 @@ export default function AdminPage() {
               {screenVisible ? "✅ Screen visible" : "▶ Show Screen"}
             </button>
 
-            {/* Spin button */}
+            {/* Spin */}
             <button
               onClick={spinOnce}
-              disabled={!canSpin}
-              className={`w-full py-4 rounded-xl text-lg font-bold tracking-wide transition-all ${
-                wheelSpinning
-                  ? "bg-blue-800 opacity-70 cursor-not-allowed"
-                  : allDone
-                    ? "bg-gray-700 opacity-40 cursor-not-allowed"
-                    : "bg-blue-700 hover:bg-blue-600 active:scale-[0.98]"
-              }`}
+              className="w-full py-4 bg-blue-700 hover:bg-blue-600 active:scale-[0.98] rounded-xl text-lg font-bold tracking-wide transition-all"
             >
-              {wheelSpinning
-                ? `⏳ Spinning… (${spinRound + 1}/5)`
-                : allDone
-                  ? "✅ All players selected"
-                  : `🎡 Spin #${spinRound + 1}`}
+              🎡 Spin #{spinRound + 1}
             </button>
 
-            {/* Selected players list */}
+            {/* Selected players so far */}
             {selectedPlayers.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs text-gray-500 uppercase tracking-widest">
@@ -159,139 +128,81 @@ export default function AdminPage() {
                     <span className="text-yellow-400 font-bold w-5 text-sm">
                       {i + 1}.
                     </span>
-                    <span className="font-medium text-sm">{p}</span>
-                    {i === selectedPlayers.length - 1 && !wheelSpinning && (
-                      <span className="ml-auto text-xs text-green-400">
-                        ← latest
-                      </span>
+                    <span className={`font-medium text-sm ${eliminated.includes(p) ? "line-through text-gray-500" : ""}`}>
+                      {p}
+                    </span>
+                    {eliminated.includes(p) && (
+                      <span className="ml-auto text-xs text-red-400">eliminated</span>
                     )}
                   </div>
                 ))}
               </div>
             )}
-
-            {/* Proceed button — only after all 5 */}
-            {allDone && (
-              <button
-                onClick={goToSelection}
-                className="w-full py-3 bg-purple-700 hover:bg-purple-600 rounded-xl font-bold transition-colors"
-              >
-                → Show Players &amp; Choose Contestant
-              </button>
-            )}
           </section>
         )}
 
         {/* ════════════════════════════════════════════════════════════════════
-            PHASE 2 — SELECTION
+            SPINNING — wheel animating
         ════════════════════════════════════════════════════════════════════ */}
-        {phase === "selection" && (
+        {phase === "spinning" && (
+          <section className="bg-gray-900 rounded-2xl p-5 space-y-4 border border-gray-800">
+            <h2 className="text-base font-semibold text-yellow-400 uppercase tracking-wider">
+              Spinning…
+            </h2>
+            <button
+              disabled
+              className="w-full py-4 bg-blue-800 opacity-70 cursor-not-allowed rounded-xl text-lg font-bold tracking-wide"
+            >
+              ⏳ Spinning…
+            </button>
+          </section>
+        )}
+
+        {/* ════════════════════════════════════════════════════════════════════
+            SELECTED — contestant revealed, start quiz
+        ════════════════════════════════════════════════════════════════════ */}
+        {phase === "selected" && (
           <section className="bg-gray-900 rounded-2xl p-5 space-y-4 border border-gray-800">
             <h2 className="text-base font-semibold text-purple-400 uppercase tracking-wider">
-              Step 2 — Choose Contestant
+              Contestant Selected
             </h2>
-
-            {activePlayers.length === 0 ? (
-              <div className="text-center py-8 space-y-3">
-                <p className="text-red-400 text-lg font-semibold">
-                  All players eliminated!
-                </p>
-                <button
-                  onClick={resetGame}
-                  className="px-6 py-2.5 bg-red-800 hover:bg-red-700 rounded-xl font-bold transition-colors"
-                >
-                  Start Over
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  {selectedPlayers.map((player) => {
-                    const isElim = eliminated.includes(player);
-                    const isSel = currentContestant === player;
-                    return (
-                      <div
-                        key={player}
-                        className={`flex items-center justify-between rounded-xl px-4 py-3 border transition-all ${
-                          isElim
-                            ? "bg-gray-800 border-gray-800 opacity-40"
-                            : isSel
-                              ? "bg-yellow-800 border-yellow-600"
-                              : "bg-gray-800 border-gray-700"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="w-5 text-center">
-                            {isElim ? "❌" : isSel ? "⭐" : "·"}
-                          </span>
-                          <span
-                            className={
-                              isElim
-                                ? "line-through text-gray-500"
-                                : "font-medium"
-                            }
-                          >
-                            {player}
-                          </span>
-                        </div>
-                        {!isElim && (
-                          <button
-                            onClick={() => selectContestant(player)}
-                            disabled={isSel}
-                            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                              isSel
-                                ? "bg-yellow-400 text-black cursor-default"
-                                : "bg-gray-700 hover:bg-gray-600"
-                            }`}
-                          >
-                            {isSel ? "✓ Selected" : "Select"}
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {currentContestant && (
-                  <button
-                    onClick={startGame}
-                    className="w-full py-3.5 bg-green-700 hover:bg-green-600 rounded-xl font-bold text-base transition-colors"
-                  >
-                    🎮 Start Game with {currentContestant}
-                  </button>
-                )}
-              </>
-            )}
+            <div className="text-center py-4">
+              <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">
+                Next up
+              </p>
+              <p className="text-3xl font-extrabold text-yellow-400">
+                {currentContestant}
+              </p>
+            </div>
+            <button
+              onClick={startQuiz}
+              className="w-full py-4 bg-green-700 hover:bg-green-600 active:scale-[0.98] rounded-xl text-lg font-bold tracking-wide transition-all"
+            >
+              🎮 Start Quiz
+            </button>
           </section>
         )}
 
         {/* ════════════════════════════════════════════════════════════════════
-            PHASE 3 — GAME
+            QUIZ — question + answer controls
         ════════════════════════════════════════════════════════════════════ */}
-        {phase === "game" && !gameOver && question && (
+        {phase === "quiz" && question && (
           <div className="space-y-3">
+
             {/* Status bar */}
             <div className="bg-gray-900 rounded-2xl px-5 py-4 flex justify-between items-center border border-gray-800">
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-widest">
-                  Contestant
-                </p>
-                <p className="text-lg font-bold text-yellow-400">
-                  {currentContestant}
-                </p>
+                <p className="text-xs text-gray-500 uppercase tracking-widest">Contestant</p>
+                <p className="text-lg font-bold text-yellow-400">{currentContestant}</p>
               </div>
               <div className="text-center">
-                <p className="text-xs text-gray-500 uppercase tracking-widest">
-                  Question
-                </p>
+                <p className="text-xs text-gray-500 uppercase tracking-widest">Question</p>
                 <p className="text-lg font-bold text-white">
                   {currentQuestionIndex + 1} / {QUESTIONS.length}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-gray-500 uppercase tracking-widest">
-                  Playing for
-                </p>
+                <p className="text-xs text-gray-500 uppercase tracking-widest">Playing for</p>
                 <p className="text-lg font-bold text-green-400">
                   {PRIZE_LADDER[currentLevel]?.toLocaleString()}
                 </p>
@@ -305,13 +216,9 @@ export default function AdminPage() {
               </p>
               <div className="flex gap-2">
                 {[
-                  { id: "5050", label: "50:50", action: useLifeline5050 },
-                  { id: "skip", label: "⏭ Skip", action: useLifelineSkip },
-                  {
-                    id: "colleague",
-                    label: "👥 Colleague",
-                    action: useLifelineColleague,
-                  },
+                  { id: "5050",      label: "50:50",        action: useLifeline5050 },
+                  { id: "skip",      label: "⏭ Skip",       action: useLifelineSkip },
+                  { id: "colleague", label: "👥 Colleague",  action: useLifelineColleague },
                 ].map(({ id, label, action }) => (
                   <button
                     key={id}
@@ -362,7 +269,6 @@ export default function AdminPage() {
             <div className="bg-gray-900 rounded-2xl px-5 py-4 border border-gray-800 space-y-3">
               {!revealAnswer ? (
                 <>
-                  {/* Player answer selection */}
                   <div className="space-y-2">
                     <p className="text-xs text-gray-500 uppercase tracking-widest">
                       Player's answer
@@ -405,13 +311,13 @@ export default function AdminPage() {
                       onClick={nextQuestion}
                       className="py-3.5 bg-green-700 hover:bg-green-600 rounded-xl font-bold transition-colors"
                     >
-                      ✅ Correct → Next
+                      ✅ Correct
                     </button>
                     <button
                       onClick={eliminateContestant}
                       className="py-3.5 bg-red-800 hover:bg-red-700 rounded-xl font-bold transition-colors"
                     >
-                      ❌ Wrong → Eliminate
+                      ❌ Wrong
                     </button>
                   </div>
                 </>
@@ -421,24 +327,35 @@ export default function AdminPage() {
         )}
 
         {/* ════════════════════════════════════════════════════════════════════
-            GAME OVER / WINNER
+            DONE — result + next player
         ════════════════════════════════════════════════════════════════════ */}
-        {phase === "game" && gameOver && (
-          <section className="bg-gray-900 rounded-2xl p-8 text-center border border-yellow-800 space-y-4">
-            <div className="text-5xl">🏆</div>
-            <h2 className="text-2xl font-bold text-yellow-400">WINNER!</h2>
-            <p className="text-xl text-white">{winner}</p>
-            <p className="text-3xl font-extrabold text-green-400">
-              {PRIZE_LADDER[currentLevel]?.toLocaleString()}
-            </p>
+        {phase === "done" && (
+          <section className={`rounded-2xl p-6 space-y-4 border text-center ${winner !== null ? "bg-green-950 border-green-800" : "bg-red-950 border-red-900"}`}>
+            {winner !== null ? (
+              <>
+                <div className="text-4xl">🏆</div>
+                <h2 className="text-xl font-bold text-green-400">Winner!</h2>
+                <p className="text-lg text-white">{winner}</p>
+                <p className="text-2xl font-extrabold text-green-400">
+                  {PRIZE_LADDER[currentLevel]?.toLocaleString()}
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="text-4xl">❌</div>
+                <h2 className="text-xl font-bold text-red-400">Eliminated</h2>
+                <p className="text-lg text-white">{currentContestant}</p>
+              </>
+            )}
             <button
-              onClick={resetGame}
-              className="mt-2 px-8 py-3 bg-blue-700 hover:bg-blue-600 rounded-xl font-bold transition-colors"
+              onClick={nextPlayer}
+              className="w-full py-3.5 bg-blue-700 hover:bg-blue-600 rounded-xl font-bold transition-colors"
             >
-              New Game
+              → Next Player
             </button>
           </section>
         )}
+
       </div>
     </div>
   );

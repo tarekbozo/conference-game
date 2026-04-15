@@ -24,7 +24,6 @@ export function useBroadcastSync(role: "admin" | "screen") {
           wheelPlayers: state.wheelPlayers,
           wheelRotation: state.wheelRotation,
           wheelTargetRotation: state.wheelTargetRotation,
-          wheelSpinning: state.wheelSpinning,
           spinRound: state.spinRound,
           currentQuestionIndex: state.currentQuestionIndex,
           revealAnswer: state.revealAnswer,

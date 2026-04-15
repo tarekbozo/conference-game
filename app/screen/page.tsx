@@ -34,122 +34,90 @@ function WaitingScreen() {
   );
 }
 
-// ── Wheel phase: spinning wheel + selected list ────────────────────────────────
+// ── Wheel screen (idle + spinning) ─────────────────────────────────────────────
 
 function WheelPhaseScreen() {
   const {
+    phase,
     wheelPlayers,
     wheelTargetRotation,
-    wheelSpinning,
+    wheelRotation,
     spinRound,
     selectedPlayers,
+    eliminated,
   } = useGameStore();
 
-  return (
-    <>
-      <div>
-        {/* Title */}
-        <p className="text-3xl font-extrabold text-yellow-400 tracking-widest uppercase flex flex-col items-center justify-center gap-6 px-6 py-8 ">
-          🎡 Who's Playing Tonight?
-        </p>
-      </div>
-      <div className="min-h-screen bg-gradient-to-b from-[#020218] to-[#05053a] flex flex-col items-center justify-center gap-6 px-6 py-8">
-        {/* Main row: wheel + selected list */}
-        <div className="flex items-center gap-14">
-          {/* Spinning wheel */}
-          <div className="flex flex-col items-center gap-4">
-            <SpinningWheel
-              players={wheelPlayers}
-              targetRotation={wheelTargetRotation}
-              spinning={wheelSpinning}
-              spinDuration={SPIN_DURATION}
-            />
-            {/* Round counter below wheel */}
-            <div className="flex gap-2.5">
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className={`w-4 h-4 rounded-full border-2 transition-all duration-500 ${
-                    i < spinRound
-                      ? "bg-yellow-400 border-yellow-400"
-                      : i === spinRound && wheelSpinning
-                        ? "bg-yellow-400/40 border-yellow-400 animate-pulse"
-                        : "bg-transparent border-gray-600"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
+  const spinning = phase === "spinning";
+  // When idle the wheel shows its last resting position
+  const targetRotation = spinning ? wheelTargetRotation : wheelRotation;
 
-          {/* Selected players (grows one by one) */}
-          {selectedPlayers.length > 0 && (
-            <div className="flex flex-col gap-3 min-w-[260px]">
-              <p className="text-xs text-gray-500 uppercase tracking-[0.2em] mb-1">
-                Selected
-              </p>
-              {selectedPlayers.map((player, i) => (
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#020218] to-[#05053a] flex flex-col items-center justify-center gap-6 px-6 py-8">
+      <p className="text-3xl font-extrabold text-yellow-400 tracking-widest uppercase">
+        🎡 Who's Playing Tonight?
+      </p>
+
+      <div className="flex items-center gap-14">
+        {/* Wheel */}
+        <div className="flex flex-col items-center gap-4">
+          <SpinningWheel
+            players={wheelPlayers}
+            targetRotation={targetRotation}
+            spinning={spinning}
+            spinDuration={SPIN_DURATION}
+          />
+          <p className="text-sm text-gray-400 tracking-widest">
+            Round{" "}
+            <span className="text-white font-bold">{spinRound + 1}</span>
+          </p>
+        </div>
+
+        {/* Selected list */}
+        {selectedPlayers.length > 0 && (
+          <div className="flex flex-col gap-3 min-w-[260px]">
+            <p className="text-xs text-gray-500 uppercase tracking-[0.2em] mb-1">
+              Selected
+            </p>
+            {selectedPlayers.map((player, i) => {
+              const isElim = eliminated.includes(player);
+              return (
                 <div
                   key={player}
-                  className="flex items-center gap-4 bg-[#0d1b4b] border-2 border-blue-500 rounded-full px-6 py-3"
+                  className={`flex items-center gap-4 border-2 rounded-full px-6 py-3 transition-all ${
+                    isElim
+                      ? "bg-gray-900 border-gray-700 opacity-40"
+                      : "bg-[#0d1b4b] border-blue-500"
+                  }`}
                 >
                   <span className="text-xl font-bold text-yellow-400 w-6">
                     {i + 1}.
                   </span>
-                  <span className="text-xl font-bold text-white">{player}</span>
+                  <span className={`text-xl font-bold text-white ${isElim ? "line-through" : ""}`}>
+                    {player}
+                  </span>
+                  {isElim && <span className="ml-auto text-base">❌</span>}
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
-    </>
+    </div>
   );
 }
 
-// ── Selection phase ────────────────────────────────────────────────────────────
+// ── Selected screen ────────────────────────────────────────────────────────────
 
-function SelectionScreen({
-  players,
-  eliminated,
-  currentContestant,
-}: {
-  players: string[];
-  eliminated: string[];
-  currentContestant: string | null;
-}) {
+function SelectedScreen({ contestant }: { contestant: string | null }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-[#020218] to-[#05053a] px-12">
-      <p className="text-5xl font-extrabold text-yellow-400 mb-14 tracking-widest uppercase">
-        Choose Your Contestant
-      </p>
-      <div className="w-full max-w-2xl space-y-5">
-        {players.map((player, i) => {
-          const isElim = eliminated.includes(player);
-          const isSel = currentContestant === player;
-          return (
-            <div
-              key={player}
-              className={`flex items-center gap-6 rounded-full px-10 py-5 border-2 transition-all duration-500 ${
-                isElim
-                  ? "bg-gray-900 border-gray-700 opacity-30"
-                  : isSel
-                    ? "bg-yellow-600 border-yellow-300 shadow-[0_0_40px_rgba(234,179,8,0.35)] scale-[1.03]"
-                    : "bg-[#0d1b4b] border-blue-500"
-              }`}
-            >
-              <span
-                className={`text-3xl font-bold w-10 shrink-0 ${isSel ? "text-white" : "text-yellow-400"}`}
-              >
-                {i + 1}.
-              </span>
-              <span className="text-3xl font-bold text-white flex-1">
-                {player}
-              </span>
-              {isElim && <span className="text-2xl">❌</span>}
-              {isSel && <span className="text-2xl">⭐</span>}
-            </div>
-          );
-        })}
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-[#020218] to-[#05053a]">
+      <div className="text-center space-y-6 px-12">
+        <p className="text-3xl font-bold text-blue-300 tracking-[0.2em] uppercase animate-pulse">
+          Next Contestant
+        </p>
+        <p className="text-8xl font-extrabold text-yellow-400 tracking-wide leading-none">
+          {contestant}
+        </p>
       </div>
     </div>
   );
@@ -198,7 +166,7 @@ function PrizeLadder({ currentLevel }: { currentLevel: number }) {
   );
 }
 
-// ── Answer button (Millionaire pill style) ─────────────────────────────────────
+// ── Answer button ──────────────────────────────────────────────────────────────
 
 function AnswerButton({
   label,
@@ -215,7 +183,7 @@ function AnswerButton({
   isHidden: boolean;
   isPlayerAnswer: boolean;
 }) {
-  if (isHidden) return <div />; // keep grid cell, show nothing
+  if (isHidden) return <div />;
 
   const base =
     "flex items-center gap-5 w-full px-7 py-4 rounded-full border-2 transition-all duration-500 min-h-[68px]";
@@ -247,7 +215,7 @@ function AnswerButton({
   );
 }
 
-// ── Main game screen ───────────────────────────────────────────────────────────
+// ── Game screen (quiz phase) ───────────────────────────────────────────────────
 
 function GameScreen({
   question,
@@ -267,16 +235,14 @@ function GameScreen({
   playerAnswer: number | null;
 }) {
   const lifelines = [
-    { id: "5050", label: "50:50", emoji: "✂️" },
-    { id: "skip", label: "Skip", emoji: "⏭" },
+    { id: "5050",      label: "50:50",     emoji: "✂️" },
+    { id: "skip",      label: "Skip",      emoji: "⏭" },
     { id: "colleague", label: "Colleague", emoji: "👥" },
   ];
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-[#020218] via-[#020a2a] to-[#05053a]">
-      {/* ── Header ── */}
       <header className="flex items-center justify-between px-10 py-5 border-b border-blue-900/40">
-        {/* Lifelines */}
         <div className="flex gap-3">
           {lifelines.map(({ id, label, emoji }) => (
             <div
@@ -292,8 +258,6 @@ function GameScreen({
             </div>
           ))}
         </div>
-
-        {/* Contestant name */}
         <div className="text-right">
           <p className="text-xs text-gray-500 uppercase tracking-[0.2em]">
             Contestant
@@ -304,14 +268,11 @@ function GameScreen({
         </div>
       </header>
 
-      {/* ── Main content ── */}
       <main className="flex flex-1 gap-6 px-10 py-6">
-        {/* Left: question + answers */}
         <div className="flex-1 flex flex-col justify-center gap-10">
           <div className="text-center space-y-3 px-4">
             <p className="text-sm text-blue-400 tracking-[0.25em] uppercase">
-              Question {currentLevel + 1}
-              {PRIZE_LADDER[currentLevel]?.toLocaleString()}
+              Question {currentLevel + 1} — {PRIZE_LADDER[currentLevel]?.toLocaleString()}
             </p>
             <p className="text-4xl font-bold text-white leading-snug tracking-wide">
               {question.text}
@@ -333,40 +294,57 @@ function GameScreen({
           </div>
         </div>
 
-        {/* Right: prize ladder */}
         <PrizeLadder currentLevel={currentLevel} />
       </main>
     </div>
   );
 }
 
-// ── Winner screen ──────────────────────────────────────────────────────────────
+// ── Done screen ────────────────────────────────────────────────────────────────
 
-function WinnerScreen({
+function DoneScreen({
   winner,
-  level,
+  eliminated,
+  currentLevel,
 }: {
   winner: string | null;
-  level: number;
+  eliminated: string | null;
+  currentLevel: number;
 }) {
+  if (winner !== null) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-[#020218] to-[#05053a]">
+        <div className="text-center space-y-6">
+          <div className="text-9xl animate-bounce">🏆</div>
+          <p className="text-5xl font-extrabold text-yellow-400 tracking-widest uppercase">
+            We Have a Winner!
+          </p>
+          <p className="text-7xl font-extrabold text-white tracking-wide">
+            {winner}
+          </p>
+          <div className="mt-6 px-16 py-8 bg-yellow-500 rounded-3xl shadow-[0_0_70px_rgba(234,179,8,0.6)]">
+            <p className="text-2xl font-bold text-black uppercase tracking-widest">
+              Wins
+            </p>
+            <p className="text-8xl font-extrabold text-black leading-none">
+              {PRIZE_LADDER[currentLevel]?.toLocaleString()}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-[#020218] to-[#05053a]">
-      <div className="text-center space-y-6">
-        <div className="text-9xl animate-bounce">🏆</div>
-        <p className="text-5xl font-extrabold text-yellow-400 tracking-widest uppercase">
-          We Have a Winner!
+      <div className="text-center space-y-6 px-12">
+        <div className="text-9xl">❌</div>
+        <p className="text-5xl font-extrabold text-red-400 tracking-widest uppercase">
+          Eliminated!
         </p>
         <p className="text-7xl font-extrabold text-white tracking-wide">
-          {winner}
+          {eliminated}
         </p>
-        <div className="mt-6 px-16 py-8 bg-yellow-500 rounded-3xl shadow-[0_0_70px_rgba(234,179,8,0.6)]">
-          <p className="text-2xl font-bold text-black uppercase tracking-widest">
-            Wins
-          </p>
-          <p className="text-8xl font-extrabold text-black leading-none">
-            {PRIZE_LADDER[level]?.toLocaleString()}
-          </p>
-        </div>
       </div>
     </div>
   );
@@ -388,7 +366,6 @@ export default function ScreenPage() {
     currentLevel,
     usedLifelines,
     hiddenAnswers,
-    gameOver,
     winner,
     playerAnswer,
   } = useGameStore();
@@ -397,22 +374,15 @@ export default function ScreenPage() {
 
   if (!screenVisible) return <WaitingScreen />;
 
-  if (phase === "wheel") {
+  if (phase === "idle" || phase === "spinning") {
     return <WheelPhaseScreen />;
   }
 
-  if (phase === "selection") {
-    return (
-      <SelectionScreen
-        players={selectedPlayers}
-        eliminated={eliminated}
-        currentContestant={currentContestant}
-      />
-    );
+  if (phase === "selected") {
+    return <SelectedScreen contestant={currentContestant} />;
   }
 
-  if (phase === "game") {
-    if (gameOver) return <WinnerScreen winner={winner} level={currentLevel} />;
+  if (phase === "quiz") {
     return (
       <GameScreen
         question={question}
@@ -422,6 +392,16 @@ export default function ScreenPage() {
         usedLifelines={usedLifelines}
         hiddenAnswers={hiddenAnswers}
         playerAnswer={playerAnswer}
+      />
+    );
+  }
+
+  if (phase === "done") {
+    return (
+      <DoneScreen
+        winner={winner}
+        eliminated={currentContestant}
+        currentLevel={currentLevel}
       />
     );
   }
