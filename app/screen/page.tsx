@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { useBroadcastSync } from "@/hooks/useBroadcastSync";
 import {
@@ -34,11 +35,205 @@ function WaitingScreen() {
   );
 }
 
+// ── Slot machine ──────────────────────────────────────────────────────────────
+
+const ITEM_H = 72; // px — height of one slot row
+const VISIBLE = 5; // odd number: 1 centre + 2 above + 2 below
+
+function SlotMachine({
+  names,
+  spinning,
+  finalName,
+}: {
+  names: string[];
+  spinning: boolean;
+  finalName: string | null;
+}) {
+  // indices into `names` for the visible strip; centre = index 2
+  const [strip, setStrip] = useState<number[]>(() =>
+    Array.from({ length: VISIBLE }, (_, i) => i % names.length),
+  );
+  // sub-pixel offset so scrolling looks continuous (0 = aligned, negative = scrolled up)
+  const [offset, setOffset] = useState(0);
+  const [bouncing, setBouncing] = useState(false);
+
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const offsetRef = useRef(0); // mutable copy for use inside interval callbacks
+
+  // Build a random next index not equal to current centre
+  const nextRandom = (centre: number) => {
+    let idx: number;
+    do {
+      idx = Math.floor(Math.random() * names.length);
+    } while (names.length > 1 && idx === centre);
+    return idx;
+  };
+
+  // Advance the strip by one row (scroll up by ITEM_H px then snap)
+  const advance = (currentStrip: number[], randomPick?: number): number[] => {
+    const newCentre = randomPick ?? nextRandom(currentStrip[2]);
+    // shift everything up: drop first element, push new one at bottom
+    const next = [...currentStrip.slice(1), newCentre];
+    return next;
+  };
+
+  // Schedule an eased-out slowdown in the final EASE_WINDOW ms of the spin
+  const EASE_WINDOW = 1200; // ms before spin ends to start slowing
+  const easeSteps: Array<{ delay: number; interval: number }> = [
+    { delay: 0, interval: 150 },
+    { delay: 600, interval: 250 },
+    { delay: 900, interval: 400 },
+    { delay: 1050, interval: 600 },
+  ];
+
+  const clearAll = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    timeoutsRef.current.forEach(clearTimeout);
+    timeoutsRef.current = [];
+  };
+
+  // Run one interval tick: scroll strip up by ITEM_H px, then snap
+  const startInterval = (
+    ms: number,
+    currentStrip: React.MutableRefObject<number[]>,
+  ) => {
+    clearAll();
+    intervalRef.current = setInterval(() => {
+      // animate offset from 0 → -ITEM_H over 50 ms then snap
+      const next = advance(currentStrip.current);
+      currentStrip.current = next;
+      setStrip([...next]);
+      offsetRef.current = 0;
+      setOffset(0);
+    }, ms);
+  };
+
+  useEffect(() => {
+    const stripRef = { current: strip };
+
+    if (spinning) {
+      setBouncing(false);
+
+      // fast phase
+      startInterval(150, stripRef);
+
+      // schedule the ease-out steps relative to when the spin will end
+      const spinEndsIn = SPIN_DURATION + 900; // matches SPIN_BUFFER in store
+      easeSteps.forEach(({ delay, interval }) => {
+        const t = setTimeout(
+          () => {
+            startInterval(interval, stripRef);
+          },
+          spinEndsIn - EASE_WINDOW + delay,
+        );
+        timeoutsRef.current.push(t);
+      });
+    } else {
+      clearAll();
+
+      if (finalName) {
+        // snap centre slot to finalName
+        const finalIdx = names.indexOf(finalName);
+        const centre = finalIdx >= 0 ? finalIdx : 0;
+        const snapped = [
+          (centre - 2 + names.length) % names.length,
+          (centre - 1 + names.length) % names.length,
+          centre,
+          (centre + 1) % names.length,
+          (centre + 2) % names.length,
+        ];
+        setStrip(snapped);
+        setOffset(0);
+        // trigger bounce
+        setBouncing(true);
+        timeoutsRef.current.push(setTimeout(() => setBouncing(false), 700));
+      }
+    }
+
+    return clearAll;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [spinning, finalName]);
+
+  const windowH = ITEM_H; // only 1 row fully visible (clipped)
+  const totalH = VISIBLE * ITEM_H;
+  // translateY to centre the middle element in the window
+  const translateY = -((VISIBLE - 1) / 2) * ITEM_H + offset;
+
+  return (
+    <div
+      style={{ width: 320, height: windowH }}
+      className="relative rounded-xl border-2 border-amber-500 bg-[#05060f] overflow-hidden shadow-[0_0_28px_rgba(245,158,11,0.35)]"
+    >
+      {/* scrolling strip */}
+      <div
+        style={{
+          transform: `translateY(${translateY}px)`,
+          height: totalH,
+          transition: "none",
+        }}
+      >
+        {strip.map((nameIdx, i) => {
+          const isCentre = i === Math.floor(VISIBLE / 2);
+          const name = !spinning && !finalName ? "?" : (names[nameIdx] ?? "?");
+          return (
+            <div
+              key={i}
+              style={{ height: ITEM_H }}
+              className="flex items-center justify-center"
+            >
+              <span
+                className={`font-extrabold tracking-wide select-none transition-transform duration-150 ${
+                  isCentre
+                    ? bouncing
+                      ? "text-yellow-400 text-4xl scale-110"
+                      : "text-yellow-400 text-4xl scale-100"
+                    : "text-gray-600 text-2xl scale-90"
+                }`}
+              >
+                {name}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* top fade */}
+      <div
+        className="absolute inset-x-0 top-0 pointer-events-none"
+        style={{
+          height: windowH * 0.45,
+          background: "linear-gradient(to bottom, #05060f, transparent)",
+        }}
+      />
+      {/* bottom fade */}
+      <div
+        className="absolute inset-x-0 bottom-0 pointer-events-none"
+        style={{
+          height: windowH * 0.45,
+          background: "linear-gradient(to top, #05060f, transparent)",
+        }}
+      />
+
+      {/* centre line indicators */}
+      <div className="absolute inset-x-0 top-0 bottom-0 pointer-events-none flex flex-col justify-between py-[1px]">
+        <div className="h-px bg-amber-500/30" />
+        <div className="h-px bg-amber-500/30" />
+      </div>
+    </div>
+  );
+}
+
 // ── Wheel screen (idle + spinning) ─────────────────────────────────────────────
 
 function WheelPhaseScreen() {
   const {
     phase,
+    allPlayers,
+    currentContestant,
     wheelPlayers,
     wheelTargetRotation,
     wheelRotation,
@@ -48,14 +243,20 @@ function WheelPhaseScreen() {
   } = useGameStore();
 
   const spinning = phase === "spinning";
-  // When idle the wheel shows its last resting position
   const targetRotation = spinning ? wheelTargetRotation : wheelRotation;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#020218] to-[#05053a] flex flex-col items-center justify-center gap-6 px-6 py-8">
+    <div className="min-h-screen bg-gradient-to-b from-[#020218] to-[#05053a] flex flex-col items-center justify-center gap-12 px-6 py-8">
       <p className="text-3xl font-extrabold text-yellow-400 tracking-widest uppercase">
         🎡 Who's Playing Tonight?
       </p>
+
+      {/* Slot machine */}
+      <SlotMachine
+        names={allPlayers}
+        spinning={spinning}
+        finalName={spinning ? null : currentContestant}
+      />
 
       <div className="flex items-center gap-14">
         {/* Wheel */}
@@ -67,8 +268,7 @@ function WheelPhaseScreen() {
             spinDuration={SPIN_DURATION}
           />
           <p className="text-sm text-gray-400 tracking-widest">
-            Round{" "}
-            <span className="text-white font-bold">{spinRound + 1}</span>
+            Round <span className="text-white font-bold">{spinRound + 1}</span>
           </p>
         </div>
 
@@ -92,7 +292,9 @@ function WheelPhaseScreen() {
                   <span className="text-xl font-bold text-yellow-400 w-6">
                     {i + 1}.
                   </span>
-                  <span className={`text-xl font-bold text-white ${isElim ? "line-through" : ""}`}>
+                  <span
+                    className={`text-xl font-bold text-white ${isElim ? "line-through" : ""}`}
+                  >
                     {player}
                   </span>
                   {isElim && <span className="ml-auto text-base">❌</span>}
@@ -235,8 +437,8 @@ function GameScreen({
   playerAnswer: number | null;
 }) {
   const lifelines = [
-    { id: "5050",      label: "50:50",     emoji: "✂️" },
-    { id: "skip",      label: "Skip",      emoji: "⏭" },
+    { id: "5050", label: "50:50", emoji: "✂️" },
+    { id: "skip", label: "Skip", emoji: "⏭" },
     { id: "colleague", label: "Colleague", emoji: "👥" },
   ];
 
@@ -272,7 +474,8 @@ function GameScreen({
         <div className="flex-1 flex flex-col justify-center gap-10">
           <div className="text-center space-y-3 px-4">
             <p className="text-sm text-blue-400 tracking-[0.25em] uppercase">
-              Question {currentLevel + 1} — {PRIZE_LADDER[currentLevel]?.toLocaleString()}
+              Question {currentLevel + 1} —{" "}
+              {PRIZE_LADDER[currentLevel]?.toLocaleString()}
             </p>
             <p className="text-4xl font-bold text-white leading-snug tracking-wide">
               {question.text}
