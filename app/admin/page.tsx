@@ -41,24 +41,25 @@ export default function AdminPage() {
 
   // ── Phase badge colour ────────────────────────────────────────────────────────
   const phaseBadge: Record<string, string> = {
-    idle:     "bg-blue-800 text-blue-200",
+    idle: "bg-blue-800 text-blue-200",
     spinning: "bg-yellow-800 text-yellow-200",
     selected: "bg-purple-800 text-purple-200",
-    quiz:     "bg-green-800 text-green-200",
-    done:     "bg-gray-700 text-gray-200",
+    quiz: "bg-green-800 text-green-200",
+    done: "bg-gray-700 text-gray-200",
   };
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       <div className="max-w-xl mx-auto p-5 space-y-4">
-
         {/* ── Header ─────────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between py-2">
           <h1 className="text-xl font-bold text-yellow-400 tracking-wide">
             🎮 Admin Panel
           </h1>
           <div className="flex items-center gap-2">
-            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${phaseBadge[phase] ?? "bg-gray-700 text-gray-200"}`}>
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${phaseBadge[phase] ?? "bg-gray-700 text-gray-200"}`}
+            >
               {phase}
             </span>
             <a
@@ -108,8 +109,13 @@ export default function AdminPage() {
 
             {/* Spin */}
             <button
+              disabled={!screenVisible}
               onClick={spinOnce}
-              className="w-full py-4 bg-blue-700 hover:bg-blue-600 active:scale-[0.98] rounded-xl text-lg font-bold tracking-wide transition-all"
+              className={`w-full py-4 bg-blue-700 hover:bg-blue-600 active:scale-[0.98] rounded-xl text-lg font-bold tracking-wide transition-all ${
+                !screenVisible
+                  ? "bg-gray-700 opacity-40 cursor-not-allowed"
+                  : "bg-blue-700 hover:bg-blue-600 active:scale-[0.98]"
+              }`}
             >
               🎡 Spin #{spinRound + 1}
             </button>
@@ -128,11 +134,15 @@ export default function AdminPage() {
                     <span className="text-yellow-400 font-bold w-5 text-sm">
                       {i + 1}.
                     </span>
-                    <span className={`font-medium text-sm ${eliminated.includes(p) ? "line-through text-gray-500" : ""}`}>
+                    <span
+                      className={`font-medium text-sm ${eliminated.includes(p) ? "line-through text-gray-500" : ""}`}
+                    >
                       {p}
                     </span>
                     {eliminated.includes(p) && (
-                      <span className="ml-auto text-xs text-red-400">eliminated</span>
+                      <span className="ml-auto text-xs text-red-400">
+                        eliminated
+                      </span>
                     )}
                   </div>
                 ))}
@@ -188,21 +198,28 @@ export default function AdminPage() {
         ════════════════════════════════════════════════════════════════════ */}
         {phase === "quiz" && question && (
           <div className="space-y-3">
-
             {/* Status bar */}
             <div className="bg-gray-900 rounded-2xl px-5 py-4 flex justify-between items-center border border-gray-800">
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-widest">Contestant</p>
-                <p className="text-lg font-bold text-yellow-400">{currentContestant}</p>
+                <p className="text-xs text-gray-500 uppercase tracking-widest">
+                  Contestant
+                </p>
+                <p className="text-lg font-bold text-yellow-400">
+                  {currentContestant}
+                </p>
               </div>
               <div className="text-center">
-                <p className="text-xs text-gray-500 uppercase tracking-widest">Question</p>
+                <p className="text-xs text-gray-500 uppercase tracking-widest">
+                  Question
+                </p>
                 <p className="text-lg font-bold text-white">
                   {currentQuestionIndex + 1} / {QUESTIONS.length}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-gray-500 uppercase tracking-widest">Playing for</p>
+                <p className="text-xs text-gray-500 uppercase tracking-widest">
+                  Playing for
+                </p>
                 <p className="text-lg font-bold text-green-400">
                   {PRIZE_LADDER[currentLevel]?.toLocaleString()}
                 </p>
@@ -216,9 +233,13 @@ export default function AdminPage() {
               </p>
               <div className="flex gap-2">
                 {[
-                  { id: "5050",      label: "50:50",        action: useLifeline5050 },
-                  { id: "skip",      label: "⏭ Skip",       action: useLifelineSkip },
-                  { id: "colleague", label: "👥 Colleague",  action: useLifelineColleague },
+                  { id: "5050", label: "50:50", action: useLifeline5050 },
+                  { id: "skip", label: "⏭ Skip", action: useLifelineSkip },
+                  {
+                    id: "colleague",
+                    label: "👥 Colleague",
+                    action: useLifelineColleague,
+                  },
                 ].map(({ id, label, action }) => (
                   <button
                     key={id}
@@ -330,7 +351,9 @@ export default function AdminPage() {
             DONE — result + next player
         ════════════════════════════════════════════════════════════════════ */}
         {phase === "done" && (
-          <section className={`rounded-2xl p-6 space-y-4 border text-center ${winner !== null ? "bg-green-950 border-green-800" : "bg-red-950 border-red-900"}`}>
+          <section
+            className={`rounded-2xl p-6 space-y-4 border text-center ${winner !== null ? "bg-green-950 border-green-800" : "bg-red-950 border-red-900"}`}
+          >
             {winner !== null ? (
               <>
                 <div className="text-4xl">🏆</div>
@@ -355,7 +378,6 @@ export default function AdminPage() {
             </button>
           </section>
         )}
-
       </div>
     </div>
   );

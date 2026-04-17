@@ -122,7 +122,7 @@ function SlotMachine({
       startInterval(150, stripRef);
 
       // schedule the ease-out steps relative to when the spin will end
-      const spinEndsIn = SPIN_DURATION + 900; // matches SPIN_BUFFER in store
+      const spinEndsIn = SPIN_DURATION; // match when the wheel CSS transition visually stops
       easeSteps.forEach(({ delay, interval }) => {
         const t = setTimeout(
           () => {
@@ -132,6 +132,15 @@ function SlotMachine({
         );
         timeoutsRef.current.push(t);
       });
+
+      // hard stop exactly when the wheel CSS transition finishes
+      const stopT = setTimeout(() => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      }, spinEndsIn);
+      timeoutsRef.current.push(stopT);
     } else {
       clearAll();
 
@@ -165,7 +174,7 @@ function SlotMachine({
 
   return (
     <div
-      style={{ width: 320, height: windowH }}
+      style={{ height: windowH }}
       className="relative rounded-xl border-2 border-amber-500 bg-[#05060f] overflow-hidden shadow-[0_0_28px_rgba(245,158,11,0.35)]"
     >
       {/* scrolling strip */}
@@ -186,12 +195,12 @@ function SlotMachine({
               className="flex items-center justify-center"
             >
               <span
-                className={`font-extrabold tracking-wide select-none transition-transform duration-150 ${
+                className={`block max-w-full overflow-hidden text-ellipsis whitespace-nowrap px-4 font-extrabold tracking-wide select-none transition-transform duration-150 ${
                   isCentre
                     ? bouncing
-                      ? "text-yellow-400 text-4xl scale-110"
-                      : "text-yellow-400 text-4xl scale-100"
-                    : "text-gray-600 text-2xl scale-90"
+                      ? "scale-110 text-4xl text-yellow-400"
+                      : "scale-100 text-4xl text-yellow-400"
+                    : "scale-90 text-3xl text-gray-600"
                 }`}
               >
                 {name}
@@ -247,7 +256,7 @@ function WheelPhaseScreen() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#020218] to-[#05053a] flex flex-col items-center justify-center gap-12 px-6 py-8">
-      <p className="text-3xl font-extrabold text-yellow-400 tracking-widest uppercase">
+      <p className="text-5xl font-extrabold text-yellow-400 tracking-widest uppercase">
         🎡 Who's Playing Tonight?
       </p>
 
