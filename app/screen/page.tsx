@@ -18,16 +18,65 @@ const LABELS = ["A", "B", "C", "D"];
 
 function WaitingScreen() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-[#020218] to-[#05053a]">
-      <div className="text-center space-y-4 px-8">
-        <div className="text-7xl mb-6">🎭</div>
-        <p className="text-4xl font-extrabold text-yellow-400 tracking-[0.12em] uppercase">
-          Who Wants to Be a
+    <div className="flex flex-col items-center min-h-screen bg-black">
+      {/* Accenture logo */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 0,
+          paddingTop: "4vh",
+        }}
+      >
+        <span
+          style={{
+            color: "#A100FF",
+            fontWeight: 700,
+            fontSize: "1.8vw",
+            lineHeight: 1,
+            marginBottom: "0.2vw",
+          }}
+        >
+          &gt;
+        </span>
+        <span
+          style={{
+            color: "white",
+            fontWeight: 700,
+            fontSize: "2.5vw",
+            letterSpacing: "0.02em",
+            fontFamily: "sans-serif",
+            lineHeight: 1,
+          }}
+        >
+          accenture
+        </span>
+      </div>
+
+      {/* Main content — vertically centered in remaining space */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-[2.5vh]">
+        <p
+          className="font-black text-white uppercase tracking-[0.12em] leading-none"
+          style={{ fontSize: "4vw" }}
+        >
+          WHO WANTS TO BE A
         </p>
-        <p className="text-7xl font-extrabold text-white tracking-[0.06em] uppercase leading-none">
-          Reinventor?
+
+        {/* REIN>ENTOR? with purple ">" */}
+        <p
+          className="font-black uppercase leading-none tracking-[0.06em]"
+          style={{ fontSize: "10vw" }}
+        >
+          <span style={{ color: "white" }}>REIN</span>
+          <span style={{ color: "#A100FF" }}>&gt;</span>
+          <span style={{ color: "white" }}>ENTOR?</span>
         </p>
-        <p className="text-2xl text-blue-300 mt-10 animate-pulse tracking-widest">
+
+        <p
+          className="text-[#666666] animate-pulse tracking-widest"
+          style={{ fontSize: "1.6vw", marginTop: "2vh" }}
+        >
           Waiting for host…
         </p>
       </div>
@@ -49,19 +98,16 @@ function SlotMachine({
   spinning: boolean;
   finalName: string | null;
 }) {
-  // indices into `names` for the visible strip; centre = index 2
   const [strip, setStrip] = useState<number[]>(() =>
     Array.from({ length: VISIBLE }, (_, i) => i % names.length),
   );
-  // sub-pixel offset so scrolling looks continuous (0 = aligned, negative = scrolled up)
   const [offset, setOffset] = useState(0);
   const [bouncing, setBouncing] = useState(false);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const offsetRef = useRef(0); // mutable copy for use inside interval callbacks
+  const offsetRef = useRef(0);
 
-  // Build a random next index not equal to current centre
   const nextRandom = (centre: number) => {
     let idx: number;
     do {
@@ -70,16 +116,13 @@ function SlotMachine({
     return idx;
   };
 
-  // Advance the strip by one row (scroll up by ITEM_H px then snap)
   const advance = (currentStrip: number[], randomPick?: number): number[] => {
     const newCentre = randomPick ?? nextRandom(currentStrip[2]);
-    // shift everything up: drop first element, push new one at bottom
     const next = [...currentStrip.slice(1), newCentre];
     return next;
   };
 
-  // Schedule an eased-out slowdown in the final EASE_WINDOW ms of the spin
-  const EASE_WINDOW = 1200; // ms before spin ends to start slowing
+  const EASE_WINDOW = 1200;
   const easeSteps: Array<{ delay: number; interval: number }> = [
     { delay: 0, interval: 150 },
     { delay: 600, interval: 250 },
@@ -96,14 +139,12 @@ function SlotMachine({
     timeoutsRef.current = [];
   };
 
-  // Run one interval tick: scroll strip up by ITEM_H px, then snap
   const startInterval = (
     ms: number,
     currentStrip: React.MutableRefObject<number[]>,
   ) => {
     clearAll();
     intervalRef.current = setInterval(() => {
-      // animate offset from 0 → -ITEM_H over 50 ms then snap
       const next = advance(currentStrip.current);
       currentStrip.current = next;
       setStrip([...next]);
@@ -118,11 +159,9 @@ function SlotMachine({
     if (spinning) {
       setBouncing(false);
 
-      // fast phase
       startInterval(150, stripRef);
 
-      // schedule the ease-out steps relative to when the spin will end
-      const spinEndsIn = SPIN_DURATION; // match when the wheel CSS transition visually stops
+      const spinEndsIn = SPIN_DURATION;
       easeSteps.forEach(({ delay, interval }) => {
         const t = setTimeout(
           () => {
@@ -133,7 +172,6 @@ function SlotMachine({
         timeoutsRef.current.push(t);
       });
 
-      // hard stop exactly when the wheel CSS transition finishes
       const stopT = setTimeout(() => {
         if (intervalRef.current) {
           clearInterval(intervalRef.current);
@@ -145,7 +183,6 @@ function SlotMachine({
       clearAll();
 
       if (finalName) {
-        // snap centre slot to finalName
         const finalIdx = names.indexOf(finalName);
         const centre = finalIdx >= 0 ? finalIdx : 0;
         const snapped = [
@@ -157,7 +194,6 @@ function SlotMachine({
         ];
         setStrip(snapped);
         setOffset(0);
-        // trigger bounce
         setBouncing(true);
         timeoutsRef.current.push(setTimeout(() => setBouncing(false), 700));
       }
@@ -167,15 +203,14 @@ function SlotMachine({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spinning, finalName]);
 
-  const windowH = ITEM_H; // only 1 row fully visible (clipped)
+  const windowH = ITEM_H;
   const totalH = VISIBLE * ITEM_H;
-  // translateY to centre the middle element in the window
   const translateY = -((VISIBLE - 1) / 2) * ITEM_H + offset;
 
   return (
     <div
       style={{ height: windowH }}
-      className="relative rounded-xl border-2 border-amber-500 bg-[#05060f] overflow-hidden shadow-[0_0_28px_rgba(245,158,11,0.35)]"
+      className="relative rounded-xl border-2 border-[#A100FF] bg-black overflow-hidden shadow-[0_0_28px_rgba(161,0,255,0.35)]"
     >
       {/* scrolling strip */}
       <div
@@ -198,9 +233,9 @@ function SlotMachine({
                 className={`block max-w-full overflow-hidden text-ellipsis whitespace-nowrap px-4 font-extrabold tracking-wide select-none transition-transform duration-150 ${
                   isCentre
                     ? bouncing
-                      ? "scale-110 text-4xl text-yellow-400"
-                      : "scale-100 text-4xl text-yellow-400"
-                    : "scale-90 text-3xl text-gray-600"
+                      ? "scale-110 text-4xl text-[#A100FF]"
+                      : "scale-100 text-4xl text-[#A100FF]"
+                    : "scale-90 text-3xl text-[#333333]"
                 }`}
               >
                 {name}
@@ -215,7 +250,7 @@ function SlotMachine({
         className="absolute inset-x-0 top-0 pointer-events-none"
         style={{
           height: windowH * 0.45,
-          background: "linear-gradient(to bottom, #05060f, transparent)",
+          background: "linear-gradient(to bottom, #000000, transparent)",
         }}
       />
       {/* bottom fade */}
@@ -223,14 +258,14 @@ function SlotMachine({
         className="absolute inset-x-0 bottom-0 pointer-events-none"
         style={{
           height: windowH * 0.45,
-          background: "linear-gradient(to top, #05060f, transparent)",
+          background: "linear-gradient(to top, #000000, transparent)",
         }}
       />
 
       {/* centre line indicators */}
       <div className="absolute inset-x-0 top-0 bottom-0 pointer-events-none flex flex-col justify-between py-[1px]">
-        <div className="h-px bg-amber-500/30" />
-        <div className="h-px bg-amber-500/30" />
+        <div className="h-px bg-[#A100FF]/30" />
+        <div className="h-px bg-[#A100FF]/30" />
       </div>
     </div>
   );
@@ -251,68 +286,86 @@ function WheelPhaseScreen() {
     eliminated,
   } = useGameStore();
 
+  const [wheelSize, setWheelSize] = useState(600);
+  useEffect(() => {
+    const calc = () =>
+      setWheelSize(Math.min(window.innerWidth, window.innerHeight) * 0.68);
+    calc();
+    window.addEventListener("resize", calc);
+    return () => window.removeEventListener("resize", calc);
+  }, []);
+
   const spinning = phase === "spinning";
   const targetRotation = spinning ? wheelTargetRotation : wheelRotation;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#020218] to-[#05053a] flex flex-col items-center justify-center gap-12 px-6 py-8">
-      <p className="text-5xl font-extrabold text-yellow-400 tracking-widest uppercase">
-        🎡 Who's Playing Tonight?
-      </p>
+    <div style={{ position: "fixed", inset: 0 }} className="bg-black">
 
-      {/* Slot machine */}
-      <SlotMachine
-        names={allPlayers}
-        spinning={spinning}
-        finalName={spinning ? null : currentContestant}
-      />
-
-      <div className="flex items-center gap-14">
-        {/* Wheel */}
-        <div className="flex flex-col items-center gap-4">
-          <SpinningWheel
-            players={wheelPlayers}
-            targetRotation={targetRotation}
-            spinning={spinning}
-            spinDuration={SPIN_DURATION}
-          />
-          <p className="text-sm text-gray-400 tracking-widest">
-            Round <span className="text-white font-bold">{spinRound + 1}</span>
-          </p>
-        </div>
-
-        {/* Selected list */}
-        {selectedPlayers.length > 0 && (
-          <div className="flex flex-col gap-3 min-w-[260px]">
-            <p className="text-xs text-gray-500 uppercase tracking-[0.2em] mb-1">
-              Selected
-            </p>
-            {selectedPlayers.map((player, i) => {
-              const isElim = eliminated.includes(player);
-              return (
-                <div
-                  key={player}
-                  className={`flex items-center gap-4 border-2 rounded-full px-6 py-3 transition-all ${
-                    isElim
-                      ? "bg-gray-900 border-gray-700 opacity-40"
-                      : "bg-[#0d1b4b] border-blue-500"
-                  }`}
-                >
-                  <span className="text-xl font-bold text-yellow-400 w-6">
-                    {i + 1}.
-                  </span>
-                  <span
-                    className={`text-xl font-bold text-white ${isElim ? "line-through" : ""}`}
-                  >
-                    {player}
-                  </span>
-                  {isElim && <span className="ml-auto text-base">❌</span>}
-                </div>
-              );
-            })}
-          </div>
-        )}
+      {/* Title */}
+      <div style={{ position: "absolute", top: "2.5vh", left: 0, right: 0, textAlign: "center" }}>
+        <p className="text-[3vw] font-extrabold text-[#A100FF] tracking-widest uppercase">
+          🎡 Who's Playing Tonight?
+        </p>
       </div>
+
+      {/* Wheel centered */}
+      <div
+        style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", gap: "2vh" }}
+        className="flex flex-col items-center"
+      >
+        <SlotMachine
+          names={allPlayers}
+          spinning={spinning}
+          finalName={spinning ? null : currentContestant}
+        />
+        <SpinningWheel
+          players={wheelPlayers}
+          targetRotation={targetRotation}
+          spinning={spinning}
+          spinDuration={SPIN_DURATION}
+          size={wheelSize}
+        />
+        <p style={{ fontSize: "1.2vw" }} className="text-[#666666] tracking-widest">
+          Round <span className="text-white font-bold">{spinRound + 1}</span>
+        </p>
+      </div>
+
+      {/* Selected list — right side */}
+      {selectedPlayers.length > 0 && (
+        <div
+          style={{ position: "absolute", right: "3vw", top: "50%", transform: "translateY(-50%)", minWidth: "20vw" }}
+          className="flex flex-col gap-[1.2vh]"
+        >
+          <p style={{ fontSize: "1vw" }} className="text-[#666666] uppercase tracking-[0.2em] mb-1">
+            Selected
+          </p>
+          {selectedPlayers.map((player, i) => {
+            const isElim = eliminated.includes(player);
+            return (
+              <div
+                key={player}
+                style={{ paddingLeft: "2vw", paddingRight: "2vw", paddingTop: "1vh", paddingBottom: "1vh", gap: "1vw" }}
+                className={`flex items-center border-2 rounded-full transition-all ${
+                  isElim
+                    ? "bg-[#1A1A1A] border-[#333333] opacity-40"
+                    : "bg-[#1A1A1A] border-[#A100FF]"
+                }`}
+              >
+                <span style={{ fontSize: "1.8vw" }} className="font-bold text-[#A100FF] w-[2vw]">
+                  {i + 1}.
+                </span>
+                <span
+                  style={{ fontSize: "1.8vw" }}
+                  className={`font-bold text-white ${isElim ? "line-through" : ""}`}
+                >
+                  {player}
+                </span>
+                {isElim && <span className="ml-auto">❌</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -321,12 +374,15 @@ function WheelPhaseScreen() {
 
 function SelectedScreen({ contestant }: { contestant: string | null }) {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-[#020218] to-[#05053a]">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-black">
       <div className="text-center space-y-6 px-12">
-        <p className="text-3xl font-bold text-blue-300 tracking-[0.2em] uppercase animate-pulse">
+        <p className="text-3xl font-bold text-[#A100FF] tracking-[0.2em] uppercase animate-pulse">
           Next Contestant
         </p>
-        <p className="text-8xl font-extrabold text-yellow-400 tracking-wide leading-none">
+        <p
+          className="font-extrabold text-white tracking-wide leading-none break-words"
+          style={{ fontSize: "clamp(2.5rem, 10vw, 7rem)" }}
+        >
           {contestant}
         </p>
       </div>
@@ -353,12 +409,12 @@ function PrizeLadder({ currentLevel }: { currentLevel: number }) {
             key={idx}
             className={`flex items-center justify-between px-3 py-[5px] rounded-lg text-xs font-bold transition-all duration-300 ${
               isCurrent
-                ? "bg-yellow-500 text-black shadow-[0_0_18px_rgba(234,179,8,0.6)] scale-[1.06] text-sm py-2"
+                ? "bg-[#A100FF] text-white shadow-[0_0_18px_rgba(161,0,255,0.6)] scale-[1.06] text-sm py-2"
                 : isSafe && !isAbove
-                  ? "bg-[#2a1500] border border-amber-700 text-amber-400"
+                  ? "bg-[#1A0030] border border-[#A100FF]/50 text-[#A100FF]"
                   : isAbove
-                    ? "bg-transparent text-gray-700"
-                    : "bg-[#0d1b4b] border border-blue-900/60 text-blue-300"
+                    ? "bg-transparent text-[#333333]"
+                    : "bg-[#1A1A1A] border border-[#333333] text-white"
             }`}
           >
             <span className="opacity-50 w-5 text-right tabular-nums">
@@ -406,22 +462,139 @@ function AnswerButton({
     } else if (isPlayerAnswer) {
       look = `${base} bg-red-700 border-red-400 shadow-[0_0_26px_rgba(239,68,68,0.5)]`;
     } else {
-      look = `${base} bg-gray-900 border-gray-700 opacity-20`;
+      look = `${base} bg-[#1A1A1A] border-[#333333] opacity-20`;
     }
   } else {
     look = isPlayerAnswer
-      ? `${base} bg-amber-500 border-amber-300 shadow-[0_0_26px_rgba(245,158,11,0.5)]`
-      : `${base} bg-[#0d1b4b] border-[#4169e1]`;
+      ? `${base} bg-[#A100FF] border-[#A100FF] shadow-[0_0_26px_rgba(161,0,255,0.5)]`
+      : `${base} bg-[#1A1A1A] border-[#333333]`;
   }
 
   return (
     <div className={look}>
-      <span className="text-xl font-extrabold text-yellow-400 w-7 shrink-0">
+      <span className="text-xl font-extrabold text-[#A100FF] w-7 shrink-0">
         {label}
       </span>
       <span className="text-lg font-semibold text-white leading-snug">
         {text}
       </span>
+    </div>
+  );
+}
+
+// ── AI Colleague overlay ───────────────────────────────────────────────────────
+
+const THINKING_STRINGS = [
+  "Scanning knowledge base...",
+  "Cross-referencing sources...",
+  "Calculating probability...",
+  "Analyzing answer patterns...",
+];
+
+function AIColleagueOverlay({
+  aiThinking,
+  aiReveal,
+  question,
+}: {
+  aiThinking: boolean;
+  aiReveal: boolean;
+  question: Question | undefined;
+}) {
+  const [thinkingText, setThinkingText] = useState(THINKING_STRINGS[0]);
+  const [dotPhase, setDotPhase] = useState(0);
+
+  useEffect(() => {
+    if (!aiThinking) return;
+    let idx = 0;
+    const textTimer = setInterval(() => {
+      idx = (idx + 1) % THINKING_STRINGS.length;
+      setThinkingText(THINKING_STRINGS[idx]);
+    }, 800);
+    const dotTimer = setInterval(() => {
+      setDotPhase((p) => (p + 1) % 4);
+    }, 350);
+    return () => {
+      clearInterval(textTimer);
+      clearInterval(dotTimer);
+    };
+  }, [aiThinking]);
+
+  if (!aiThinking && !aiReveal) return null;
+
+  const correctIdx = question?.correct ?? 0;
+  const correctLabel = LABELS[correctIdx];
+  const correctText = question?.answers[correctIdx] ?? "";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div
+        className={`relative rounded-3xl px-12 py-10 max-w-lg w-full mx-6 text-center shadow-2xl transition-all ${
+          aiThinking
+            ? "bg-black border-2 border-[#A100FF] shadow-[0_0_60px_rgba(161,0,255,0.3)]"
+            : "bg-[#071a0f] border-2 border-green-500 shadow-[0_0_60px_rgba(34,197,94,0.3)]"
+        }`}
+        style={
+          aiThinking
+            ? { animation: "aiPulse 1.8s ease-in-out infinite" }
+            : undefined
+        }
+      >
+        <style>{`
+          @keyframes aiPulse {
+            0%, 100% { box-shadow: 0 0 40px rgba(161,0,255,0.25); }
+            50% { box-shadow: 0 0 80px rgba(161,0,255,0.55); }
+          }
+        `}</style>
+
+        <p className="text-2xl font-extrabold text-[#A100FF] tracking-widest uppercase mb-6">
+          🤖 AI Colleague
+        </p>
+
+        {aiThinking && (
+          <>
+            <div className="flex justify-center gap-3 mb-6">
+              {[0, 1, 2].map((i) => (
+                <span
+                  key={i}
+                  className="inline-block w-4 h-4 rounded-full bg-[#A100FF]"
+                  style={{
+                    opacity: dotPhase === i || dotPhase === 3 ? 1 : 0.2,
+                    transform:
+                      dotPhase === i ? "translateY(-6px)" : "translateY(0)",
+                    transition: "all 0.25s ease",
+                  }}
+                />
+              ))}
+            </div>
+            <p className="text-lg text-white tracking-wide min-h-[28px] transition-all duration-300">
+              {thinkingText}
+            </p>
+          </>
+        )}
+
+        {aiReveal && (
+          <>
+            <p className="text-lg text-gray-300 mb-6">
+              I am <span className="text-[#A100FF] font-bold">99.9%</span>{" "}
+              confident the answer is:
+            </p>
+            <div
+              className="inline-flex items-center gap-4 px-8 py-5 rounded-2xl border-2 border-green-400 bg-green-900/40"
+              style={{
+                boxShadow:
+                  "0 0 40px rgba(34,197,94,0.4), 0 0 80px rgba(34,197,94,0.15)",
+              }}
+            >
+              <span className="text-4xl font-extrabold text-[#A100FF]">
+                {correctLabel}
+              </span>
+              <span className="text-3xl font-bold text-green-300 leading-snug">
+                {correctText}
+              </span>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -436,6 +609,8 @@ function GameScreen({
   usedLifelines,
   hiddenAnswers,
   playerAnswer,
+  aiThinking,
+  aiReveal,
 }: {
   question: Question;
   revealAnswer: boolean;
@@ -444,24 +619,26 @@ function GameScreen({
   usedLifelines: string[];
   hiddenAnswers: number[];
   playerAnswer: number | null;
+  aiThinking: boolean;
+  aiReveal: boolean;
 }) {
   const lifelines = [
     { id: "5050", label: "50:50", emoji: "✂️" },
     { id: "skip", label: "Skip", emoji: "⏭" },
-    { id: "colleague", label: "Colleague", emoji: "👥" },
+    { id: "ai", label: "AI Colleague", emoji: "🤖" },
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-b from-[#020218] via-[#020a2a] to-[#05053a]">
-      <header className="flex items-center justify-between px-10 py-5 border-b border-blue-900/40">
+    <div className="flex flex-col min-h-screen bg-black">
+      <header className="flex items-center justify-between px-10 py-5 border-b border-[#333333]">
         <div className="flex gap-3">
           {lifelines.map(({ id, label, emoji }) => (
             <div
               key={id}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-full border-2 font-bold text-base tracking-wide transition-all ${
                 usedLifelines.includes(id)
-                  ? "bg-transparent border-gray-800 text-gray-700 line-through opacity-40"
-                  : "bg-[#0d1b4b] border-yellow-500 text-yellow-300"
+                  ? "bg-transparent border-[#333333] text-[#333333] line-through opacity-40"
+                  : "bg-[#1A1A1A] border-[#A100FF] text-[#A100FF]"
               }`}
             >
               <span className="text-lg">{emoji}</span>
@@ -470,10 +647,10 @@ function GameScreen({
           ))}
         </div>
         <div className="text-right">
-          <p className="text-xs text-gray-500 uppercase tracking-[0.2em]">
+          <p className="text-xs text-[#666666] uppercase tracking-[0.2em]">
             Contestant
           </p>
-          <p className="text-3xl font-extrabold text-yellow-400 tracking-wide">
+          <p className="text-3xl font-extrabold text-[#A100FF] tracking-wide">
             {currentContestant}
           </p>
         </div>
@@ -482,7 +659,7 @@ function GameScreen({
       <main className="flex flex-1 gap-6 px-10 py-6">
         <div className="flex-1 flex flex-col justify-center gap-10">
           <div className="text-center space-y-3 px-4">
-            <p className="text-sm text-blue-400 tracking-[0.25em] uppercase">
+            <p className="text-sm text-[#A100FF] tracking-[0.25em] uppercase">
               Question {currentLevel + 1} —{" "}
               {PRIZE_LADDER[currentLevel]?.toLocaleString()}
             </p>
@@ -508,6 +685,12 @@ function GameScreen({
 
         <PrizeLadder currentLevel={currentLevel} />
       </main>
+
+      <AIColleagueOverlay
+        aiThinking={aiThinking}
+        aiReveal={aiReveal}
+        question={question}
+      />
     </div>
   );
 }
@@ -525,20 +708,20 @@ function DoneScreen({
 }) {
   if (winner !== null) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-[#020218] to-[#05053a]">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-black">
         <div className="text-center space-y-6">
           <div className="text-9xl animate-bounce">🏆</div>
-          <p className="text-5xl font-extrabold text-yellow-400 tracking-widest uppercase">
+          <p className="text-5xl font-extrabold text-[#A100FF] tracking-widest uppercase">
             We Have a Winner!
           </p>
           <p className="text-7xl font-extrabold text-white tracking-wide">
             {winner}
           </p>
-          <div className="mt-6 px-16 py-8 bg-yellow-500 rounded-3xl shadow-[0_0_70px_rgba(234,179,8,0.6)]">
-            <p className="text-2xl font-bold text-black uppercase tracking-widest">
+          <div className="mt-6 px-16 py-8 bg-[#A100FF] rounded-3xl shadow-[0_0_70px_rgba(161,0,255,0.6)]">
+            <p className="text-2xl font-bold text-white uppercase tracking-widest">
               Wins
             </p>
-            <p className="text-8xl font-extrabold text-black leading-none">
+            <p className="text-8xl font-extrabold text-white leading-none">
               {PRIZE_LADDER[currentLevel]?.toLocaleString()}
             </p>
           </div>
@@ -548,7 +731,7 @@ function DoneScreen({
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-[#020218] to-[#05053a]">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-black">
       <div className="text-center space-y-6 px-12">
         <div className="text-9xl">❌</div>
         <p className="text-5xl font-extrabold text-red-400 tracking-widest uppercase">
@@ -580,6 +763,8 @@ export default function ScreenPage() {
     hiddenAnswers,
     winner,
     playerAnswer,
+    aiThinking,
+    aiReveal,
   } = useGameStore();
 
   const question = QUESTIONS[currentQuestionIndex];
@@ -604,6 +789,8 @@ export default function ScreenPage() {
         usedLifelines={usedLifelines}
         hiddenAnswers={hiddenAnswers}
         playerAnswer={playerAnswer}
+        aiThinking={aiThinking}
+        aiReveal={aiReveal}
       />
     );
   }

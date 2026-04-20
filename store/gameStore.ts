@@ -59,10 +59,18 @@ export interface GameData {
 
   // Player's chosen answer
   playerAnswer: number | null;
+
+  // AI Colleague lifeline state
+  aiThinking: boolean;
+  aiReveal: boolean;
+
+  // Admin-only: secretly pre-select the spin winner (never broadcast)
+  forcedWinner?: string | null;
 }
 
 interface GameActions {
   spinOnce: () => void;
+  setForcedWinner: (name: string | null) => void;
   startQuiz: () => void;
   nextPlayer: () => void;
   correctAnswer: () => void;
@@ -71,7 +79,7 @@ interface GameActions {
   revealCurrentAnswer: () => void;
   useLifeline5050: () => void;
   useLifelineSkip: () => void;
-  useLifelineColleague: () => void;
+  useLifelineAI: () => void;
   selectPlayerAnswer: (index: number) => void;
   showScreen: () => void;
   resetGame: () => void;
@@ -107,6 +115,11 @@ const initialData: GameData = {
   screenVisible: false,
 
   playerAnswer: null,
+
+  aiThinking: false,
+  aiReveal: false,
+
+  forcedWinner: null,
 };
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -134,7 +147,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       );
       if (remaining.length === 0) return;
       const selectedPlayer =
-        remaining[Math.floor(Math.random() * remaining.length)];
+        curr.forcedWinner && remaining.includes(curr.forcedWinner)
+          ? curr.forcedWinner
+          : remaining[Math.floor(Math.random() * remaining.length)];
 
       set({
         phase: "selected",
@@ -142,6 +157,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         currentContestant: selectedPlayer,
         selectedPlayers: [...curr.selectedPlayers, selectedPlayer],
         spinRound: curr.spinRound + 1,
+        forcedWinner: null,
       });
     }, SPIN_DURATION + SPIN_BUFFER);
   },
@@ -196,6 +212,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       revealAnswer: false,
       hiddenAnswers: [],
       playerAnswer: null,
+      aiThinking: false,
+      aiReveal: false,
       phase: "quiz",
     });
   },
@@ -209,6 +227,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       revealAnswer: false,
       hiddenAnswers: [],
       playerAnswer: null,
+      aiThinking: false,
+      aiReveal: false,
       phase: "done",
     });
   },
@@ -242,17 +262,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const { usedLifelines } = get();
     if (usedLifelines.includes("skip")) return;
     set({ usedLifelines: [...usedLifelines, "skip"] });
+    get().nextQuestion();
   },
 
-  useLifelineColleague: () => {
+  useLifelineAI: () => {
     const { usedLifelines } = get();
-    if (usedLifelines.includes("colleague")) return;
-    set({ usedLifelines: [...usedLifelines, "colleague"] });
+    if (usedLifelines.includes("ai")) return;
+    set({ usedLifelines: [...usedLifelines, "ai"], aiThinking: true, aiReveal: false });
+    setTimeout(() => {
+      set({ aiThinking: false, aiReveal: true });
+    }, 4000);
   },
 
   // ── Utility ──────────────────────────────────────────────────────────────────
 
-  selectPlayerAnswer: (index) => set({ playerAnswer: index }),
+  setForcedWinner: (name) => set({ forcedWinner: name }),
+
+  selectPlayerAnswer: (index) => set({ playerAnswer: index, aiReveal: false }),
 
   showScreen: () => set({ screenVisible: true }),
 

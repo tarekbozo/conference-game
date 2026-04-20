@@ -61,14 +61,14 @@ export default function SpinningWheel({
             cx="18"
             cy="9"
             r="8"
-            fill="#ef4444"
+            fill="#A100FF"
             stroke="#fff"
             strokeWidth="2.5"
           />
-          <rect x="15" y="16" width="6" height="16" rx="3" fill="#ef4444" />
+          <rect x="15" y="16" width="6" height="16" rx="3" fill="#A100FF" />
           <polygon
             points="4,30 32,30 18,52"
-            fill="#ef4444"
+            fill="#A100FF"
             stroke="#fff"
             strokeWidth="1.5"
             strokeLinejoin="round"
@@ -126,7 +126,7 @@ export default function SpinningWheel({
                   paddingLeft: "0.6ch",
                   fontSize,
                   fontWeight: 700,
-                  color: "#1a1a2e",
+                  color: "#000000",
                   overflow: "hidden",
                   whiteSpace: "nowrap",
                 }}
@@ -138,16 +138,16 @@ export default function SpinningWheel({
         </ul>
       </div>
 
-      {/* Gold ring */}
+      {/* Purple ring */}
       <div
         style={{
           position: "absolute",
           inset: 0,
           borderRadius: "50%",
           boxShadow: [
-            "0 0 0 2px #f59e0b",
-            "0 0 0 13px #f59e0b40",
-            "0 0 40px rgba(245,158,11,0.25)",
+            "0 0 0 2px #A100FF",
+            "0 0 0 13px #A100FF40",
+            "0 0 40px rgba(161,0,255,0.25)",
             "inset 0 0 40px rgba(0,0,0,0.55)",
           ].join(", "),
           pointerEvents: "none",
@@ -165,10 +165,10 @@ export default function SpinningWheel({
           width: hubSize,
           height: hubSize,
           borderRadius: "50%",
-          background: "#05060f",
-          border: "3px solid #f59e0b",
+          background: "#000000",
+          border: "3px solid #A100FF",
           boxShadow:
-            "0 0 18px rgba(245,158,11,0.45), inset 0 0 12px rgba(0,0,0,0.7)",
+            "0 0 18px rgba(161,0,255,0.45), inset 0 0 12px rgba(0,0,0,0.7)",
           zIndex: 20,
           display: "flex",
           alignItems: "center",
@@ -182,14 +182,14 @@ export default function SpinningWheel({
               width: 12,
               height: 12,
               borderRadius: "50%",
-              background: "#facc15",
+              background: "#A100FF",
               animation: "ping 1s cubic-bezier(0,0,0.2,1) infinite",
             }}
           />
         ) : (
           <span
             style={{
-              color: "#facc15",
+              color: "#A100FF",
               fontWeight: 800,
               fontSize: Math.max(8, Math.round(size * 0.022)),
               letterSpacing: "0.15em",

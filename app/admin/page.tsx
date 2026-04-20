@@ -11,6 +11,7 @@ export default function AdminPage() {
 
   const {
     phase,
+    allPlayers,
     selectedPlayers,
     eliminated,
     currentContestant,
@@ -23,6 +24,7 @@ export default function AdminPage() {
     winner,
     screenVisible,
     playerAnswer,
+    forcedWinner,
     spinOnce,
     showScreen,
     startQuiz,
@@ -33,32 +35,37 @@ export default function AdminPage() {
     selectPlayerAnswer,
     useLifeline5050,
     useLifelineSkip,
-    useLifelineColleague,
+    useLifelineAI,
+    setForcedWinner,
     resetGame,
   } = useGameStore();
+
+  const availablePlayers = allPlayers.filter(
+    (p) => !selectedPlayers.includes(p),
+  );
 
   const question = QUESTIONS[currentQuestionIndex];
 
   // ── Phase badge colour ────────────────────────────────────────────────────────
   const phaseBadge: Record<string, string> = {
-    idle: "bg-blue-800 text-blue-200",
-    spinning: "bg-yellow-800 text-yellow-200",
-    selected: "bg-purple-800 text-purple-200",
+    idle: "bg-[#1A1A1A] text-[#A100FF]",
+    spinning: "bg-[#A100FF]/20 text-[#A100FF]",
+    selected: "bg-[#A100FF]/20 text-[#A100FF]",
     quiz: "bg-green-800 text-green-200",
-    done: "bg-gray-700 text-gray-200",
+    done: "bg-[#333333] text-white",
   };
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-black text-white">
       <div className="max-w-xl mx-auto p-5 space-y-4">
         {/* ── Header ─────────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between py-2">
-          <h1 className="text-xl font-bold text-yellow-400 tracking-wide">
-            🎮 Admin Panel
+          <h1 className="text-xl font-bold text-[#A100FF] tracking-wide">
+            Admin Panel
           </h1>
           <div className="flex items-center gap-2">
             <span
-              className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${phaseBadge[phase] ?? "bg-gray-700 text-gray-200"}`}
+              className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${phaseBadge[phase] ?? "bg-[#333333] text-white"}`}
             >
               {phase}
             </span>
@@ -66,7 +73,7 @@ export default function AdminPage() {
               href="/screen"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-medium transition-colors border border-gray-700"
+              className="px-3 py-1.5 bg-[#1A1A1A] hover:bg-[#333333] rounded-lg text-xs font-medium transition-colors border border-[#333333]"
             >
               Open Screen ↗
             </a>
@@ -83,12 +90,12 @@ export default function AdminPage() {
             IDLE — spin to pick next contestant
         ════════════════════════════════════════════════════════════════════ */}
         {phase === "idle" && (
-          <section className="bg-gray-900 rounded-2xl p-5 space-y-4 border border-gray-800">
+          <section className="bg-[#1A1A1A] rounded-2xl p-5 space-y-4 border border-[#333333]">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold text-blue-400 uppercase tracking-wider">
+              <h2 className="text-base font-semibold text-[#A100FF] uppercase tracking-wider">
                 Spin the Wheel
               </h2>
-              <span className="text-sm text-gray-400 font-mono">
+              <span className="text-sm text-[#666666] font-mono">
                 Round{" "}
                 <span className="text-white font-bold">{spinRound + 1}</span>
               </span>
@@ -100,7 +107,7 @@ export default function AdminPage() {
               disabled={screenVisible}
               className={`w-full py-3 rounded-xl font-bold tracking-wide transition-all ${
                 screenVisible
-                  ? "bg-gray-700 opacity-40 cursor-not-allowed"
+                  ? "bg-[#333333] opacity-40 cursor-not-allowed"
                   : "bg-emerald-700 hover:bg-emerald-600 active:scale-[0.98]"
               }`}
             >
@@ -109,33 +116,54 @@ export default function AdminPage() {
 
             {/* Spin */}
             <button
-              disabled={!screenVisible}
+              disabled={!screenVisible || !forcedWinner}
               onClick={spinOnce}
-              className={`w-full py-4 bg-blue-700 hover:bg-blue-600 active:scale-[0.98] rounded-xl text-lg font-bold tracking-wide transition-all ${
-                !screenVisible
-                  ? "bg-gray-700 opacity-40 cursor-not-allowed"
-                  : "bg-blue-700 hover:bg-blue-600 active:scale-[0.98]"
+              className={`w-full py-4 rounded-xl text-lg font-bold tracking-wide transition-all ${
+                !screenVisible || !forcedWinner
+                  ? "bg-[#333333] opacity-40 cursor-not-allowed"
+                  : "bg-[#A100FF] hover:bg-[#8800dd] active:scale-[0.98]"
               }`}
             >
               🎡 Spin #{spinRound + 1}
             </button>
 
+            {/* Force winner (admin-only, hidden from audience) */}
+            <div className="space-y-1">
+              <p className="text-xs text-[#666666] uppercase tracking-widest">
+                Force winner (hidden from audience)
+              </p>
+              <select
+                value={forcedWinner ?? ""}
+                onChange={(e) =>
+                  setForcedWinner(e.target.value || null)
+                }
+                className="w-full bg-[#1A1A1A] border border-[#333333] text-[#666666] text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#A100FF]"
+              >
+                <option value="">— Random (default) —</option>
+                {availablePlayers.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Selected players so far */}
             {selectedPlayers.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs text-gray-500 uppercase tracking-widest">
+                <p className="text-xs text-[#666666] uppercase tracking-widest">
                   Selected so far
                 </p>
                 {selectedPlayers.map((p, i) => (
                   <div
                     key={p}
-                    className="flex items-center gap-3 bg-gray-800 rounded-lg px-4 py-2.5 border border-gray-700"
+                    className="flex items-center gap-3 bg-[#1A1A1A] rounded-lg px-4 py-2.5 border border-[#333333]"
                   >
-                    <span className="text-yellow-400 font-bold w-5 text-sm">
+                    <span className="text-[#A100FF] font-bold w-5 text-sm">
                       {i + 1}.
                     </span>
                     <span
-                      className={`font-medium text-sm ${eliminated.includes(p) ? "line-through text-gray-500" : ""}`}
+                      className={`font-medium text-sm ${eliminated.includes(p) ? "line-through text-[#666666]" : ""}`}
                     >
                       {p}
                     </span>
@@ -155,13 +183,13 @@ export default function AdminPage() {
             SPINNING — wheel animating
         ════════════════════════════════════════════════════════════════════ */}
         {phase === "spinning" && (
-          <section className="bg-gray-900 rounded-2xl p-5 space-y-4 border border-gray-800">
-            <h2 className="text-base font-semibold text-yellow-400 uppercase tracking-wider">
+          <section className="bg-[#1A1A1A] rounded-2xl p-5 space-y-4 border border-[#333333]">
+            <h2 className="text-base font-semibold text-[#A100FF] uppercase tracking-wider">
               Spinning…
             </h2>
             <button
               disabled
-              className="w-full py-4 bg-blue-800 opacity-70 cursor-not-allowed rounded-xl text-lg font-bold tracking-wide"
+              className="w-full py-4 bg-[#A100FF]/20 opacity-70 cursor-not-allowed rounded-xl text-lg font-bold tracking-wide"
             >
               ⏳ Spinning…
             </button>
@@ -172,15 +200,15 @@ export default function AdminPage() {
             SELECTED — contestant revealed, start quiz
         ════════════════════════════════════════════════════════════════════ */}
         {phase === "selected" && (
-          <section className="bg-gray-900 rounded-2xl p-5 space-y-4 border border-gray-800">
-            <h2 className="text-base font-semibold text-purple-400 uppercase tracking-wider">
+          <section className="bg-[#1A1A1A] rounded-2xl p-5 space-y-4 border border-[#333333]">
+            <h2 className="text-base font-semibold text-[#A100FF] uppercase tracking-wider">
               Contestant Selected
             </h2>
             <div className="text-center py-4">
-              <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">
+              <p className="text-xs text-[#666666] uppercase tracking-widest mb-2">
                 Next up
               </p>
-              <p className="text-3xl font-extrabold text-yellow-400">
+              <p className="text-3xl font-extrabold text-[#A100FF]">
                 {currentContestant}
               </p>
             </div>
@@ -199,17 +227,17 @@ export default function AdminPage() {
         {phase === "quiz" && question && (
           <div className="space-y-3">
             {/* Status bar */}
-            <div className="bg-gray-900 rounded-2xl px-5 py-4 flex justify-between items-center border border-gray-800">
+            <div className="bg-[#1A1A1A] rounded-2xl px-5 py-4 flex justify-between items-center border border-[#333333]">
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-widest">
+                <p className="text-xs text-[#666666] uppercase tracking-widest">
                   Contestant
                 </p>
-                <p className="text-lg font-bold text-yellow-400">
+                <p className="text-lg font-bold text-[#A100FF]">
                   {currentContestant}
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-xs text-gray-500 uppercase tracking-widest">
+                <p className="text-xs text-[#666666] uppercase tracking-widest">
                   Question
                 </p>
                 <p className="text-lg font-bold text-white">
@@ -217,7 +245,7 @@ export default function AdminPage() {
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-gray-500 uppercase tracking-widest">
+                <p className="text-xs text-[#666666] uppercase tracking-widest">
                   Playing for
                 </p>
                 <p className="text-lg font-bold text-green-400">
@@ -227,8 +255,8 @@ export default function AdminPage() {
             </div>
 
             {/* Lifelines */}
-            <div className="bg-gray-900 rounded-2xl px-5 py-4 border border-gray-800">
-              <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">
+            <div className="bg-[#1A1A1A] rounded-2xl px-5 py-4 border border-[#333333]">
+              <p className="text-xs text-[#666666] uppercase tracking-widest mb-3">
                 Lifelines
               </p>
               <div className="flex gap-2">
@@ -236,9 +264,9 @@ export default function AdminPage() {
                   { id: "5050", label: "50:50", action: useLifeline5050 },
                   { id: "skip", label: "⏭ Skip", action: useLifelineSkip },
                   {
-                    id: "colleague",
-                    label: "👥 Colleague",
-                    action: useLifelineColleague,
+                    id: "ai",
+                    label: "🤖 AI",
+                    action: useLifelineAI,
                   },
                 ].map(({ id, label, action }) => (
                   <button
@@ -247,8 +275,8 @@ export default function AdminPage() {
                     disabled={usedLifelines.includes(id)}
                     className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${
                       usedLifelines.includes(id)
-                        ? "bg-gray-800 opacity-30 cursor-not-allowed line-through"
-                        : "bg-amber-700 hover:bg-amber-600"
+                        ? "bg-[#1A1A1A] opacity-30 cursor-not-allowed line-through"
+                        : "bg-[#A100FF] hover:bg-[#8800dd]"
                     }`}
                   >
                     {label}
@@ -258,8 +286,8 @@ export default function AdminPage() {
             </div>
 
             {/* Question preview */}
-            <div className="bg-gray-900 rounded-2xl px-5 py-4 border border-gray-800">
-              <p className="text-xs text-gray-500 uppercase tracking-widest mb-2">
+            <div className="bg-[#1A1A1A] rounded-2xl px-5 py-4 border border-[#333333]">
+              <p className="text-xs text-[#666666] uppercase tracking-widest mb-2">
                 Current question
               </p>
               <p className="text-sm font-medium leading-relaxed text-gray-100 mb-4">
@@ -273,11 +301,11 @@ export default function AdminPage() {
                       revealAnswer
                         ? idx === question.correct
                           ? "bg-green-800 border-green-600 font-bold"
-                          : "bg-gray-800 border-gray-700 opacity-40"
-                        : "bg-gray-800 border-gray-700"
+                          : "bg-[#1A1A1A] border-[#333333] opacity-40"
+                        : "bg-[#1A1A1A] border-[#333333]"
                     }`}
                   >
-                    <span className="text-yellow-400 font-bold mr-1.5">
+                    <span className="text-[#A100FF] font-bold mr-1.5">
                       {LABELS[idx]})
                     </span>
                     {answer}
@@ -287,11 +315,11 @@ export default function AdminPage() {
             </div>
 
             {/* Action buttons */}
-            <div className="bg-gray-900 rounded-2xl px-5 py-4 border border-gray-800 space-y-3">
+            <div className="bg-[#1A1A1A] rounded-2xl px-5 py-4 border border-[#333333] space-y-3">
               {!revealAnswer ? (
                 <>
                   <div className="space-y-2">
-                    <p className="text-xs text-gray-500 uppercase tracking-widest">
+                    <p className="text-xs text-[#666666] uppercase tracking-widest">
                       Player's answer
                     </p>
                     <div className="grid grid-cols-4 gap-2">
@@ -301,8 +329,8 @@ export default function AdminPage() {
                           onClick={() => selectPlayerAnswer(idx)}
                           className={`py-2.5 rounded-lg text-sm font-bold transition-colors ${
                             playerAnswer === idx
-                              ? "bg-amber-500 text-black"
-                              : "bg-gray-800 hover:bg-gray-700 text-gray-200"
+                              ? "bg-[#A100FF] text-white"
+                              : "bg-[#1A1A1A] hover:bg-[#333333] text-gray-200"
                           }`}
                         >
                           {label}
@@ -315,8 +343,8 @@ export default function AdminPage() {
                     disabled={playerAnswer === null}
                     className={`w-full py-4 rounded-xl font-bold text-base tracking-wide transition-colors ${
                       playerAnswer === null
-                        ? "bg-gray-700 opacity-40 cursor-not-allowed"
-                        : "bg-yellow-700 hover:bg-yellow-600"
+                        ? "bg-[#333333] opacity-40 cursor-not-allowed"
+                        : "bg-[#A100FF] hover:bg-[#8800dd]"
                     }`}
                   >
                     🔍 Reveal Answer
@@ -324,7 +352,7 @@ export default function AdminPage() {
                 </>
               ) : (
                 <>
-                  <p className="text-center text-xs text-gray-500 uppercase tracking-widest">
+                  <p className="text-center text-xs text-[#666666] uppercase tracking-widest">
                     Was the answer correct?
                   </p>
                   <div className="grid grid-cols-2 gap-3">
@@ -372,7 +400,7 @@ export default function AdminPage() {
             )}
             <button
               onClick={nextPlayer}
-              className="w-full py-3.5 bg-blue-700 hover:bg-blue-600 rounded-xl font-bold transition-colors"
+              className="w-full py-3.5 bg-[#A100FF] hover:bg-[#8800dd] rounded-xl font-bold transition-colors"
             >
               → Next Player
             </button>
