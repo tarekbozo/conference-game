@@ -35,7 +35,8 @@ function WaitingScreen() {
             fontWeight: 700,
             fontSize: "1.8vw",
             lineHeight: 1,
-            marginBottom: "0.2vw",
+            marginBottom: "-18px",
+            marginLeft: "118px",
           }}
         >
           &gt;
@@ -300,9 +301,16 @@ function WheelPhaseScreen() {
 
   return (
     <div style={{ position: "fixed", inset: 0 }} className="bg-black">
-
       {/* Title */}
-      <div style={{ position: "absolute", top: "2.5vh", left: 0, right: 0, textAlign: "center" }}>
+      <div
+        style={{
+          position: "absolute",
+          top: "2.5vh",
+          left: 0,
+          right: 0,
+          textAlign: "center",
+        }}
+      >
         <p className="text-[3vw] font-extrabold text-[#A100FF] tracking-widest uppercase">
           🎡 Who's Playing Tonight?
         </p>
@@ -310,7 +318,13 @@ function WheelPhaseScreen() {
 
       {/* Wheel centered */}
       <div
-        style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", gap: "2vh" }}
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          gap: "2vh",
+        }}
         className="flex flex-col items-center"
       >
         <SlotMachine
@@ -325,7 +339,10 @@ function WheelPhaseScreen() {
           spinDuration={SPIN_DURATION}
           size={wheelSize}
         />
-        <p style={{ fontSize: "1.2vw" }} className="text-[#666666] tracking-widest">
+        <p
+          style={{ fontSize: "1.2vw" }}
+          className="text-[#666666] tracking-widest"
+        >
           Round <span className="text-white font-bold">{spinRound + 1}</span>
         </p>
       </div>
@@ -333,10 +350,19 @@ function WheelPhaseScreen() {
       {/* Selected list — right side */}
       {selectedPlayers.length > 0 && (
         <div
-          style={{ position: "absolute", right: "3vw", top: "50%", transform: "translateY(-50%)", minWidth: "20vw" }}
+          style={{
+            position: "absolute",
+            right: "3vw",
+            top: "50%",
+            transform: "translateY(-50%)",
+            minWidth: "20vw",
+          }}
           className="flex flex-col gap-[1.2vh]"
         >
-          <p style={{ fontSize: "1vw" }} className="text-[#666666] uppercase tracking-[0.2em] mb-1">
+          <p
+            style={{ fontSize: "1vw" }}
+            className="text-[#666666] uppercase tracking-[0.2em] mb-1"
+          >
             Selected
           </p>
           {selectedPlayers.map((player, i) => {
@@ -344,14 +370,23 @@ function WheelPhaseScreen() {
             return (
               <div
                 key={player}
-                style={{ paddingLeft: "2vw", paddingRight: "2vw", paddingTop: "1vh", paddingBottom: "1vh", gap: "1vw" }}
+                style={{
+                  paddingLeft: "2vw",
+                  paddingRight: "2vw",
+                  paddingTop: "1vh",
+                  paddingBottom: "1vh",
+                  gap: "1vw",
+                }}
                 className={`flex items-center border-2 rounded-full transition-all ${
                   isElim
                     ? "bg-[#1A1A1A] border-[#333333] opacity-40"
                     : "bg-[#1A1A1A] border-[#A100FF]"
                 }`}
               >
-                <span style={{ fontSize: "1.8vw" }} className="font-bold text-[#A100FF] w-[2vw]">
+                <span
+                  style={{ fontSize: "1.8vw" }}
+                  className="font-bold text-[#A100FF] w-[2vw]"
+                >
                   {i + 1}.
                 </span>
                 <span
