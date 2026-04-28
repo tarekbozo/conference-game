@@ -6,6 +6,7 @@ import { Phase } from "@/store/gameStore";
 type SoundKey =
   | "spinLoop"
   | "quizLoop"
+  | "gameStart"
   | "correctLevel1"
   | "correctLevel2"
   | "correctLevel3"
@@ -15,6 +16,7 @@ type SoundKey =
 const audioFiles: Record<SoundKey, string> = {
   spinLoop: "/sounds/spin-loop.mp3",
   quizLoop: "/sounds/quiz-loop.mp3",
+  gameStart: "/sounds/game-start.mp3",
   correctLevel1: "/sounds/correct-level-1.mp3",
   correctLevel2: "/sounds/correct-level-2.mp3",
   correctLevel3: "/sounds/correct-level-3.mp3",
@@ -60,6 +62,7 @@ export function useScreenAudio({
   const loadPromiseRef = useRef<Promise<void> | null>(null);
   const lastRevealRef = useRef<boolean>(false);
   const lastLifelineCountRef = useRef<number>(usedLifelines.length);
+  const lastPhaseRef = useRef<Phase>(phase);
   const mountedRef = useRef(true);
 
   const ensureAudioContext = (): AudioContext => {
@@ -185,6 +188,13 @@ export function useScreenAudio({
 
     stopBackgroundMusic();
   }, [phase, screenVisible]);
+
+  useEffect(() => {
+    if (lastPhaseRef.current !== phase && phase === "selected") {
+      void playEffect("gameStart");
+    }
+    lastPhaseRef.current = phase;
+  }, [phase]);
 
   useEffect(() => {
     if (revealAnswer && !lastRevealRef.current && playerAnswer !== null) {
