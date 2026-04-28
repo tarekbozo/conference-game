@@ -64,13 +64,13 @@ function WaitingScreen() {
           WHO WANTS TO BE A
         </p>
 
-        {/* REIN>ENTOR? with purple ">" */}
+        {/* REINVENTOR? with purple and rotated "V" */}
         <p
           className="font-black uppercase leading-none tracking-[0.06em]"
           style={{ fontSize: "10vw" }}
         >
           <span style={{ color: "white" }}>REIN</span>
-          <span style={{ color: "#A100FF" }}>&gt;</span>
+          <span style={{ color: "#A100FF", transform: "rotateZ(-90deg) translate(-0.4vw, -0.6vw)", display: "inline-block" }}>V</span>
           <span style={{ color: "white" }}>ENTOR?</span>
         </p>
 
