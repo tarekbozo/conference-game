@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { useBroadcastSync } from "@/hooks/useBroadcastSync";
+import { useScreenAudio } from "@/hooks/useScreenAudio";
 import {
   QUESTIONS,
   PRIZE_LADDER,
@@ -803,6 +804,16 @@ export default function ScreenPage() {
   } = useGameStore();
 
   const question = QUESTIONS[currentQuestionIndex];
+
+  useScreenAudio({
+    phase,
+    screenVisible,
+    revealAnswer,
+    playerAnswer,
+    currentQuestionCorrect: question?.correct ?? 0,
+    currentLevel,
+    usedLifelines,
+  });
 
   if (!screenVisible) return <WaitingScreen />;
 
