@@ -32,6 +32,7 @@ interface UseScreenAudioOptions {
   currentQuestionCorrect: number;
   currentLevel: number;
   usedLifelines: string[];
+  audioEnabled: boolean;
 }
 
 async function fetchAudioBuffer(
@@ -55,6 +56,7 @@ export function useScreenAudio({
   currentQuestionCorrect,
   currentLevel,
   usedLifelines,
+  audioEnabled,
 }: UseScreenAudioOptions) {
   const audioContextRef = useRef<AudioContext | null>(null);
   const buffersRef = useRef<Partial<Record<SoundKey, AudioBuffer>>>({});
@@ -63,6 +65,7 @@ export function useScreenAudio({
   const lastRevealRef = useRef<boolean>(false);
   const lastLifelineCountRef = useRef<number>(usedLifelines.length);
   const lastPhaseRef = useRef<Phase>(phase);
+  const startPlayedRef = useRef(false);
   const mountedRef = useRef(true);
 
   const ensureAudioContext = (): AudioContext => {
@@ -85,6 +88,7 @@ export function useScreenAudio({
   };
 
   const ensureAudioLoaded = async () => {
+    if (!audioEnabled) return;
     if (!loadPromiseRef.current) {
       loadPromiseRef.current = (async () => {
         const context = ensureAudioContext();
@@ -106,6 +110,7 @@ export function useScreenAudio({
   };
 
   const playEffect = async (key: SoundKey) => {
+    if (!audioEnabled) return;
     try {
       await ensureAudioLoaded();
       if (!mountedRef.current) return;
@@ -128,6 +133,7 @@ export function useScreenAudio({
   };
 
   const playBackgroundMusic = async (key: SoundKey) => {
+    if (!audioEnabled) return;
     try {
       await ensureAudioLoaded();
       if (!mountedRef.current || !screenVisible) return;
@@ -155,7 +161,6 @@ export function useScreenAudio({
 
   useEffect(() => {
     mountedRef.current = true;
-    loadPromiseRef.current = ensureAudioLoaded();
 
     return () => {
       mountedRef.current = false;
@@ -171,6 +176,11 @@ export function useScreenAudio({
   }, []);
 
   useEffect(() => {
+    if (!audioEnabled) {
+      stopBackgroundMusic();
+      return;
+    }
+
     if (!screenVisible) {
       stopBackgroundMusic();
       return;
@@ -178,23 +188,23 @@ export function useScreenAudio({
 
     if (phase === "spinning") {
       void playBackgroundMusic("spinLoop");
-      return;
-    }
-
-    if (phase === "quiz") {
+    } else if (phase === "quiz") {
       void playBackgroundMusic("quizLoop");
-      return;
+    } else {
+      stopBackgroundMusic();
     }
 
-    stopBackgroundMusic();
-  }, [phase, screenVisible]);
-
-  useEffect(() => {
-    if (lastPhaseRef.current !== phase && phase === "selected") {
+    if (phase === "selected" && !startPlayedRef.current) {
       void playEffect("gameStart");
+      startPlayedRef.current = true;
     }
+
+    if (phase !== "selected") {
+      startPlayedRef.current = false;
+    }
+
     lastPhaseRef.current = phase;
-  }, [phase]);
+  }, [phase, screenVisible, audioEnabled]);
 
   useEffect(() => {
     if (revealAnswer && !lastRevealRef.current && playerAnswer !== null) {
