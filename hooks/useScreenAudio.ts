@@ -61,6 +61,9 @@ export function useScreenAudio({
   const audioContextRef = useRef<AudioContext | null>(null);
   const buffersRef = useRef<Partial<Record<SoundKey, AudioBuffer>>>({});
   const bgSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const bgGainRef = useRef<GainNode | null>(null);
+  const currentBgKeyRef = useRef<SoundKey | null>(null);
+  const fadeTimeoutRef = useRef<number | null>(null);
   const loadPromiseRef = useRef<Promise<void> | null>(null);
   const lastRevealRef = useRef<boolean>(false);
   const lastLifelineCountRef = useRef<number>(usedLifelines.length);
@@ -75,7 +78,16 @@ export function useScreenAudio({
     return audioContextRef.current;
   };
 
+  const cancelBackgroundFade = () => {
+    if (fadeTimeoutRef.current !== null) {
+      window.clearTimeout(fadeTimeoutRef.current);
+      fadeTimeoutRef.current = null;
+    }
+  };
+
   const stopBackgroundMusic = () => {
+    cancelBackgroundFade();
+
     const source = bgSourceRef.current;
     if (!source) return;
     try {
@@ -85,6 +97,25 @@ export function useScreenAudio({
     }
     source.disconnect();
     bgSourceRef.current = null;
+    currentBgKeyRef.current = null;
+  };
+
+  const fadeOutBackgroundMusic = (duration = 0.5) => {
+    const context = audioContextRef.current;
+    const gain = bgGainRef.current;
+    if (!context || !gain || !bgSourceRef.current) {
+      stopBackgroundMusic();
+      return;
+    }
+
+    cancelBackgroundFade();
+    const now = context.currentTime;
+    gain.gain.cancelScheduledValues(now);
+    gain.gain.setValueAtTime(gain.gain.value, now);
+    gain.gain.linearRampToValueAtTime(0, now + duration);
+    fadeTimeoutRef.current = window.setTimeout(() => {
+      stopBackgroundMusic();
+    }, duration * 1000);
   };
 
   const ensureAudioLoaded = async () => {
@@ -132,7 +163,7 @@ export function useScreenAudio({
     }
   };
 
-  const playBackgroundMusic = async (key: SoundKey) => {
+  const playBackgroundMusic = async (key: SoundKey, volume: number) => {
     if (!audioEnabled) return;
     try {
       await ensureAudioLoaded();
@@ -146,14 +177,31 @@ export function useScreenAudio({
       const buffer = buffersRef.current[key];
       if (!buffer) return;
 
+      const existingKey = currentBgKeyRef.current;
+      const gain = bgGainRef.current ?? context.createGain();
+      gain.connect(context.destination);
+      bgGainRef.current = gain;
+
+      if (existingKey === key && bgSourceRef.current) {
+        cancelBackgroundFade();
+        const now = context.currentTime;
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setValueAtTime(gain.gain.value, now);
+        gain.gain.linearRampToValueAtTime(volume, now + 1);
+        currentBgKeyRef.current = key;
+        return;
+      }
+
       stopBackgroundMusic();
 
       const source = context.createBufferSource();
       source.buffer = buffer;
       source.loop = true;
-      source.connect(context.destination);
+      source.connect(gain);
+      gain.gain.setValueAtTime(volume, context.currentTime);
       source.start();
       bgSourceRef.current = source;
+      currentBgKeyRef.current = key;
     } catch (error) {
       console.error("Unable to play background music:", error);
     }
@@ -186,12 +234,14 @@ export function useScreenAudio({
       return;
     }
 
-    if (phase === "spinning") {
-      void playBackgroundMusic("spinLoop");
+    if (phase === "idle") {
+      void playBackgroundMusic("spinLoop", 0.1);
+    } else if (phase === "spinning") {
+      void playBackgroundMusic("spinLoop", 1);
     } else if (phase === "quiz") {
-      void playBackgroundMusic("quizLoop");
+      void playBackgroundMusic("quizLoop", 1);
     } else {
-      stopBackgroundMusic();
+      fadeOutBackgroundMusic(0.5);
     }
 
     if (phase === "selected" && !startPlayedRef.current) {
