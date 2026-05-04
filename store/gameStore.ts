@@ -109,8 +109,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setForcedWinner: (n) => set({ forcedWinner: n }),
 
-  setActiveQuestion: (q) =>
-    set({ activeQuestion: q, playerAnswer: null, revealAnswer: false, phase: "quiz", hiddenAnswers: [], aiThinking: false, aiReveal: false, aiWrongAnswer: null }),
+  setActiveQuestion: (q: PlayerQuestion) => set((state) => ({
+    ...state,
+    activeQuestion: q,
+    currentContestant: q.playerName,
+    playerAnswer: null,
+    revealAnswer: false,
+    aiThinking: false,
+    aiReveal: false,
+    aiWrongAnswer: null,
+    hiddenAnswers: [],
+    phase: 'quiz'
+  })),
 
   selectPlayerAnswer: (i) => set({ playerAnswer: i, aiThinking: false, aiReveal: false, aiWrongAnswer: null }),
 
