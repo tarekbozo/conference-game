@@ -1,411 +1,386 @@
 "use client";
 
+import { useState } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { useBroadcastSync } from "@/hooks/useBroadcastSync";
-import { QUESTIONS, PRIZE_LADDER } from "@/data/mockData";
+import { PLAYERS, ALL_PLAYERS, Player, PlayerQuestion } from "@/data/mockData";
 
 const LABELS = ["A", "B", "C", "D"];
+
+const DIFF_CLS = {
+  easy: "text-green-400 border-green-600 bg-green-900/30",
+  medium: "text-amber-400 border-amber-600 bg-amber-900/30",
+  hard: "text-red-400 border-red-600 bg-red-900/30",
+} as const;
+
+const PHASE_BADGE: Record<string, string> = {
+  idle: "bg-[#1A1A1A] text-[#A100FF]",
+  spinning: "bg-[#A100FF]/20 text-[#A100FF]",
+  selected: "bg-[#A100FF]/20 text-[#A100FF]",
+  quiz: "bg-green-800 text-green-200",
+  done: "bg-[#333] text-white",
+};
 
 export default function AdminPage() {
   useBroadcastSync("admin");
 
   const {
     phase,
-    allPlayers,
     selectedPlayers,
-    eliminated,
     currentContestant,
-    currentQuestionIndex,
-    revealAnswer,
-    currentLevel,
-    spinRound,
-    usedLifelines,
-    gameOver,
-    winner,
-    screenVisible,
+    eliminated,
+    activeQuestion,
     playerAnswer,
-    forcedWinner,
+    revealAnswer,
+    hiddenAnswers,
+    aiThinking,
     spinOnce,
     showScreen,
-    startQuiz,
-    nextPlayer,
-    nextQuestion,
-    eliminateContestant,
-    revealCurrentAnswer,
-    selectPlayerAnswer,
-    useLifeline5050,
-    useLifelineSkip,
-    useLifelineAI,
     setForcedWinner,
+    forcedWinner,
+    setActiveQuestion,
+    selectPlayerAnswer,
+    revealCurrentAnswer,
+    markCorrect,
+    markWrong,
+    nextPlayer,
+    readyForNextSpin,
+    startQuiz,
     resetGame,
+    use5050,
+    useLifelineAI,
+    usedLifelines,
+    winnerName,
+    wheelSpinning,
+    screenVisible,
+    spinRound,
   } = useGameStore();
 
-  const availablePlayers = allPlayers.filter(
+  const availablePlayers = ALL_PLAYERS.filter(
     (p) => !selectedPlayers.includes(p),
   );
 
-  const question = QUESTIONS[currentQuestionIndex];
+  const handleSetActiveQuestion = (q: PlayerQuestion) => {
+    setActiveQuestion(q);
+  };
 
-  // ── Phase badge colour ────────────────────────────────────────────────────────
-  const phaseBadge: Record<string, string> = {
-    idle: "bg-[#1A1A1A] text-[#A100FF]",
-    spinning: "bg-[#A100FF]/20 text-[#A100FF]",
-    selected: "bg-[#A100FF]/20 text-[#A100FF]",
-    quiz: "bg-green-800 text-green-200",
-    done: "bg-[#333333] text-white",
+  const handleLifeline = (id: string, action: () => void) => {
+    if (usedLifelines.includes(id)) return;
+    action();
   };
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <div className="max-w-xl mx-auto p-5 space-y-4">
-        {/* ── Header ─────────────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between py-2">
-          <h1 className="text-xl font-bold text-[#A100FF] tracking-wide">
-            Admin Panel
-          </h1>
-          <div className="flex items-center gap-2">
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${phaseBadge[phase] ?? "bg-[#333333] text-white"}`}
-            >
-              {phase}
-            </span>
-            <a
-              href="/screen"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1.5 bg-[#1A1A1A] hover:bg-[#333333] rounded-lg text-xs font-medium transition-colors border border-[#333333]"
-            >
-              Open Screen ↗
-            </a>
-            <button
-              onClick={resetGame}
-              className="px-3 py-1.5 bg-red-900 hover:bg-red-800 rounded-lg text-xs font-medium transition-colors border border-red-800"
-            >
-              Reset
-            </button>
-          </div>
-        </div>
-
-        {/* ════════════════════════════════════════════════════════════════════
-            IDLE — spin to pick next contestant
-        ════════════════════════════════════════════════════════════════════ */}
-        {phase === "idle" && (
-          <section className="bg-[#1A1A1A] rounded-2xl p-5 space-y-4 border border-[#333333]">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold text-[#A100FF] uppercase tracking-wider">
-                Spin the Wheel
-              </h2>
-              <span className="text-sm text-[#666666] font-mono">
-                Round{" "}
-                <span className="text-white font-bold">{spinRound + 1}</span>
+      <div className="max-w-7xl mx-auto p-5 space-y-4">
+        {/* ── TOP BAR ──────────────────────────────────────────────────────── */}
+        <div className="flex-none h-24 border-b border-[#333] flex justify-between px-4 gap-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-base font-bold text-[#A100FF] tracking-wide">
+              Admin Panel
+            </h1>
+            <div className="flex items-center gap-2 px-4">
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest ${PHASE_BADGE[phase] ?? "bg-[#333] text-white"}`}
+              >
+                {phase}
               </span>
+              <a
+                href="/screen"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 bg-[#1A1A1A] hover:bg-[#333] rounded-lg text-xs font-medium border border-[#333] transition-colors"
+              >
+                Open Screen ↗
+              </a>
+              <button
+                onClick={resetGame}
+                className="px-3 py-1.5 bg-red-900 hover:bg-red-800 rounded-lg text-xs font-medium border border-red-800 transition-colors"
+              >
+                Reset
+              </button>
             </div>
+          </div>
 
-            {/* Show Screen */}
-            <button
-              onClick={showScreen}
-              disabled={screenVisible}
-              className={`w-full py-3 rounded-xl font-bold tracking-wide transition-all ${
-                screenVisible
-                  ? "bg-[#333333] opacity-40 cursor-not-allowed"
-                  : "bg-emerald-700 hover:bg-emerald-600 active:scale-[0.98]"
-              }`}
-            >
-              {screenVisible ? "✅ Screen visible" : "▶ Show Screen"}
-            </button>
-
-            {/* Spin */}
-            <button
-              disabled={!screenVisible || !forcedWinner}
-              onClick={spinOnce}
-              className={`w-full py-4 rounded-xl text-lg font-bold tracking-wide transition-all ${
-                !screenVisible || !forcedWinner
-                  ? "bg-[#333333] opacity-40 cursor-not-allowed"
-                  : "bg-[#A100FF] hover:bg-[#8800dd] active:scale-[0.98]"
-              }`}
-            >
-              🎡 Spin #{spinRound + 1}
-            </button>
-
-            {/* Force winner (admin-only, hidden from audience) */}
-            <div className="space-y-1">
-              <p className="text-xs text-[#666666] uppercase tracking-widest">
-                Force winner (hidden from audience)
-              </p>
+          {(phase === "idle" || phase === "spinning") && (
+            <div className="flex items-center gap-6">
+              <button
+                onClick={showScreen}
+                disabled={screenVisible}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  screenVisible
+                    ? "bg-[#333] opacity-40 cursor-not-allowed"
+                    : "bg-emerald-700 hover:bg-emerald-600"
+                }`}
+              >
+                {screenVisible ? "✅ Screen on" : "▶ Show Screen"}
+              </button>
               <select
                 value={forcedWinner ?? ""}
-                onChange={(e) =>
-                  setForcedWinner(e.target.value || null)
-                }
-                className="w-full bg-[#1A1A1A] border border-[#333333] text-[#666666] text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#A100FF]"
+                onChange={(e) => setForcedWinner(e.target.value || null)}
+                className="bg-[#1A1A1A] border border-[#333] text-[#999] text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#A100FF]"
               >
-                <option value="">— Random (default) —</option>
+                <option value="">— Force winner —</option>
                 {availablePlayers.map((p) => (
                   <option key={p} value={p}>
                     {p}
                   </option>
                 ))}
               </select>
+              <button
+                disabled={!screenVisible || !forcedWinner || wheelSpinning}
+                onClick={spinOnce}
+                className={`flex-1 p-3 rounded-lg text-md font-bold tracking-wide transition-all ${
+                  !screenVisible || !forcedWinner || wheelSpinning
+                    ? "bg-[#333] opacity-40 cursor-not-allowed"
+                    : "bg-[#A100FF] hover:bg-[#8800dd]"
+                }`}
+              >
+                {wheelSpinning ? "⏳ Spinning…" : `🎡 Spin #${spinRound + 1}`}
+              </button>
             </div>
+          )}
 
-            {/* Selected players so far */}
-            {selectedPlayers.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs text-[#666666] uppercase tracking-widest">
-                  Selected so far
-                </p>
-                {selectedPlayers.map((p, i) => (
-                  <div
-                    key={p}
-                    className="flex items-center gap-3 bg-[#1A1A1A] rounded-lg px-4 py-2.5 border border-[#333333]"
-                  >
-                    <span className="text-[#A100FF] font-bold w-5 text-sm">
-                      {i + 1}.
-                    </span>
-                    <span
-                      className={`font-medium text-sm ${eliminated.includes(p) ? "line-through text-[#666666]" : ""}`}
+          {phase === "selected" && (
+            <div className="flex items-center gap-6">
+              <span className="text-sm text-[#A100FF] font-bold flex-1">
+                {currentContestant} selected
+              </span>
+              <button
+                onClick={startQuiz}
+                className="px-4 py-3 bg-[#A100FF] hover:bg-[#8800dd] rounded-lg text-md font-bold transition-colors"
+              >
+                🎮 Start Quiz
+              </button>
+              <button
+                onClick={readyForNextSpin}
+                className="px-4 py-3 bg-[#1A1A1A] hover:bg-[#333] border border-[#555] rounded-lg text-md font-bold transition-colors"
+              >
+                🔄 Spin Again
+              </button>
+            </div>
+          )}
+
+          {phase === "winner" && (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-yellow-400 font-bold">
+                🏆 {winnerName} won!
+              </span>
+              <button
+                onClick={nextPlayer}
+                className="ml-auto px-4 py-3 bg-yellow-600 hover:bg-yellow-500 rounded-lg text-xs font-bold transition-colors"
+              >
+                🏆 Winner! Move to next player
+              </button>
+            </div>
+          )}
+
+          {phase === "done" && (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-red-400 font-bold">
+                {currentContestant} eliminated
+              </span>
+              <button
+                onClick={nextPlayer}
+                className="ml-auto px-4 py-3 bg-[#A100FF] hover:bg-[#8800dd] rounded-lg text-xs font-bold transition-colors"
+              >
+                ❌ Eliminated. Next player
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ── SECTION 1 — Current Question ─────────────────────────────────── */}
+        <div className="flex-none h-[40%] border-b border-[#333] overflow-y-auto p-4">
+          <p className="text-xs text-[#666] uppercase tracking-widest mb-3">
+            Current Question
+          </p>
+
+          {!activeQuestion ? (
+            <div className="flex items-center justify-center h-16 text-[#555] text-sm italic">
+              No question selected — click a card below
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-white text-sm">
+                  {activeQuestion.playerName}
+                </span>
+                <span
+                  className={`px-2 py-0.5 rounded text-xs font-bold border capitalize ${DIFF_CLS[activeQuestion.difficulty]}`}
+                >
+                  {activeQuestion.difficulty}
+                </span>
+              </div>
+
+              <p className="text-base font-semibold text-white leading-snug">
+                {activeQuestion.question}
+              </p>
+
+              <div className="grid grid-cols-4 gap-2">
+                {activeQuestion.answers.map((answer, idx) => {
+                  let cls =
+                    "rounded-lg p-2 text-xs font-bold border transition-all text-center ";
+                  if (revealAnswer) {
+                    if (idx === activeQuestion.correct) {
+                      cls += "bg-green-700 border-green-500 text-white";
+                    } else if (idx === playerAnswer) {
+                      cls += "bg-red-800 border-red-600 text-white";
+                    } else {
+                      cls +=
+                        "bg-[#1A1A1A] border-[#333] text-[#555] opacity-40";
+                    }
+                  } else {
+                    cls +=
+                      idx === playerAnswer
+                        ? "bg-[#A100FF] border-[#A100FF] text-white"
+                        : "bg-[#1A1A1A] border-[#333] text-white hover:border-[#A100FF]/50 cursor-pointer";
+                  }
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => !revealAnswer && selectPlayerAnswer(idx)}
+                      disabled={revealAnswer}
+                      className={cls}
                     >
-                      {p}
-                    </span>
-                    {eliminated.includes(p) && (
-                      <span className="ml-auto text-xs text-red-400">
-                        eliminated
+                      <span className="block text-[10px] text-[#A100FF] font-extrabold mb-0.5">
+                        {LABELS[idx]}
                       </span>
-                    )}
-                  </div>
-                ))}
+                      <span className="block leading-tight">{answer}</span>
+                    </button>
+                  );
+                })}
               </div>
-            )}
-          </section>
-        )}
 
-        {/* ════════════════════════════════════════════════════════════════════
-            SPINNING — wheel animating
-        ════════════════════════════════════════════════════════════════════ */}
-        {phase === "spinning" && (
-          <section className="bg-[#1A1A1A] rounded-2xl p-5 space-y-4 border border-[#333333]">
-            <h2 className="text-base font-semibold text-[#A100FF] uppercase tracking-wider">
-              Spinning…
-            </h2>
-            <button
-              disabled
-              className="w-full py-4 bg-[#A100FF]/20 opacity-70 cursor-not-allowed rounded-xl text-lg font-bold tracking-wide"
-            >
-              ⏳ Spinning…
-            </button>
-          </section>
-        )}
-
-        {/* ════════════════════════════════════════════════════════════════════
-            SELECTED — contestant revealed, start quiz
-        ════════════════════════════════════════════════════════════════════ */}
-        {phase === "selected" && (
-          <section className="bg-[#1A1A1A] rounded-2xl p-5 space-y-4 border border-[#333333]">
-            <h2 className="text-base font-semibold text-[#A100FF] uppercase tracking-wider">
-              Contestant Selected
-            </h2>
-            <div className="text-center py-4">
-              <p className="text-xs text-[#666666] uppercase tracking-widest mb-2">
-                Next up
-              </p>
-              <p className="text-3xl font-extrabold text-[#A100FF]">
-                {currentContestant}
-              </p>
-            </div>
-            <button
-              onClick={startQuiz}
-              className="w-full py-4 bg-green-700 hover:bg-green-600 active:scale-[0.98] rounded-xl text-lg font-bold tracking-wide transition-all"
-            >
-              🎮 Start Quiz
-            </button>
-          </section>
-        )}
-
-        {/* ════════════════════════════════════════════════════════════════════
-            QUIZ — question + answer controls
-        ════════════════════════════════════════════════════════════════════ */}
-        {phase === "quiz" && question && (
-          <div className="space-y-3">
-            {/* Status bar */}
-            <div className="bg-[#1A1A1A] rounded-2xl px-5 py-4 flex justify-between items-center border border-[#333333]">
-              <div>
-                <p className="text-xs text-[#666666] uppercase tracking-widest">
-                  Contestant
-                </p>
-                <p className="text-lg font-bold text-[#A100FF]">
-                  {currentContestant}
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-xs text-[#666666] uppercase tracking-widest">
-                  Question
-                </p>
-                <p className="text-lg font-bold text-white">
-                  {currentQuestionIndex + 1} / {QUESTIONS.length}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-[#666666] uppercase tracking-widest">
-                  Playing for
-                </p>
-                <p className="text-lg font-bold text-green-400">
-                  {PRIZE_LADDER[currentLevel]?.toLocaleString()}
-                </p>
-              </div>
-            </div>
-
-            {/* Lifelines */}
-            <div className="bg-[#1A1A1A] rounded-2xl px-5 py-4 border border-[#333333]">
-              <p className="text-xs text-[#666666] uppercase tracking-widest mb-3">
-                Lifelines
-              </p>
               <div className="flex gap-2">
-                {[
-                  { id: "5050", label: "50:50", action: useLifeline5050 },
-                  { id: "skip", label: "⏭ Skip", action: useLifelineSkip },
-                  {
-                    id: "ai",
-                    label: "🤖 AI",
-                    action: useLifelineAI,
-                  },
-                ].map(({ id, label, action }) => (
-                  <button
-                    key={id}
-                    onClick={action}
-                    disabled={usedLifelines.includes(id)}
-                    className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${
-                      usedLifelines.includes(id)
-                        ? "bg-[#1A1A1A] opacity-30 cursor-not-allowed line-through"
-                        : "bg-[#A100FF] hover:bg-[#8800dd]"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Question preview */}
-            <div className="bg-[#1A1A1A] rounded-2xl px-5 py-4 border border-[#333333]">
-              <p className="text-xs text-[#666666] uppercase tracking-widest mb-2">
-                Current question
-              </p>
-              <p className="text-sm font-medium leading-relaxed text-gray-100 mb-4">
-                {question.text}
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {question.answers.map((answer, idx) => (
-                  <div
-                    key={idx}
-                    className={`px-3 py-2 rounded-lg text-xs border transition-all ${
-                      revealAnswer
-                        ? idx === question.correct
-                          ? "bg-green-800 border-green-600 font-bold"
-                          : "bg-[#1A1A1A] border-[#333333] opacity-40"
-                        : "bg-[#1A1A1A] border-[#333333]"
-                    }`}
-                  >
-                    <span className="text-[#A100FF] font-bold mr-1.5">
-                      {LABELS[idx]})
-                    </span>
-                    {answer}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div className="bg-[#1A1A1A] rounded-2xl px-5 py-4 border border-[#333333] space-y-3">
-              {!revealAnswer ? (
-                <>
-                  <div className="space-y-2">
-                    <p className="text-xs text-[#666666] uppercase tracking-widest">
-                      Player's answer
-                    </p>
-                    <div className="grid grid-cols-4 gap-2">
-                      {LABELS.map((label, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => selectPlayerAnswer(idx)}
-                          className={`py-2.5 rounded-lg text-sm font-bold transition-colors ${
-                            playerAnswer === idx
-                              ? "bg-[#A100FF] text-white"
-                              : "bg-[#1A1A1A] hover:bg-[#333333] text-gray-200"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                {!revealAnswer && playerAnswer !== null && (
                   <button
                     onClick={revealCurrentAnswer}
-                    disabled={playerAnswer === null}
-                    className={`w-full py-4 rounded-xl font-bold text-base tracking-wide transition-colors ${
-                      playerAnswer === null
-                        ? "bg-[#333333] opacity-40 cursor-not-allowed"
-                        : "bg-[#A100FF] hover:bg-[#8800dd]"
-                    }`}
+                    className="flex-1 py-2 bg-[#A100FF] hover:bg-[#8800dd] rounded-lg text-sm font-bold transition-colors"
                   >
                     🔍 Reveal Answer
                   </button>
-                </>
-              ) : (
-                <>
-                  <p className="text-center text-xs text-[#666666] uppercase tracking-widest">
-                    Was the answer correct?
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
+                )}
+                {revealAnswer && (
+                  <>
                     <button
-                      onClick={nextQuestion}
-                      className="py-3.5 bg-green-700 hover:bg-green-600 rounded-xl font-bold transition-colors"
+                      onClick={markCorrect}
+                      className="flex-1 py-2 bg-green-700 hover:bg-green-600 rounded-lg text-sm font-bold transition-colors"
                     >
                       ✅ Correct
                     </button>
                     <button
-                      onClick={eliminateContestant}
-                      className="py-3.5 bg-red-800 hover:bg-red-700 rounded-xl font-bold transition-colors"
+                      onClick={markWrong}
+                      className="flex-1 py-2 bg-red-800 hover:bg-red-700 rounded-lg text-sm font-bold transition-colors"
                     >
                       ❌ Wrong
                     </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
+                  </>
+                )}
+              </div>
 
-        {/* ════════════════════════════════════════════════════════════════════
-            DONE — result + next player
-        ════════════════════════════════════════════════════════════════════ */}
-        {phase === "done" && (
-          <section
-            className={`rounded-2xl p-6 space-y-4 border text-center ${winner !== null ? "bg-green-950 border-green-800" : "bg-red-950 border-red-900"}`}
-          >
-            {winner !== null ? (
-              <>
-                <div className="text-4xl">🏆</div>
-                <h2 className="text-xl font-bold text-green-400">Winner!</h2>
-                <p className="text-lg text-white">{winner}</p>
-                <p className="text-2xl font-extrabold text-green-400">
-                  {PRIZE_LADDER[currentLevel]?.toLocaleString()}
-                </p>
-              </>
-            ) : (
-              <>
-                <div className="text-4xl">❌</div>
-                <h2 className="text-xl font-bold text-red-400">Eliminated</h2>
-                <p className="text-lg text-white">{currentContestant}</p>
-              </>
-            )}
-            <button
-              onClick={nextPlayer}
-              className="w-full py-3.5 bg-[#A100FF] hover:bg-[#8800dd] rounded-xl font-bold transition-colors"
-            >
-              → Next Player
-            </button>
-          </section>
-        )}
+              <div className="flex gap-2 max-w-4xl m-auto">
+                {[
+                  { id: "5050", label: "50/50", action: use5050 },
+                  { id: "ai", label: "🤖 AI", action: useLifelineAI },
+                ].map(({ id, label, action }) => {
+                  const used = usedLifelines.includes(id);
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => handleLifeline(id, action)}
+                      disabled={used}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${
+                        used
+                          ? "bg-[#1A1A1A] opacity-40 cursor-not-allowed line-through"
+                          : "bg-[#A100FF] hover:bg-[#8800dd]"
+                      }`}
+                    >
+                      {used ? `✕ ${label}` : label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── SECTION 2 — Question Overview ────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto p-4">
+          <p className="text-xs text-[#666] uppercase tracking-widest mb-3">
+            Question Overview
+          </p>
+          <div className="grid grid-cols-4 gap-3">
+            {PLAYERS.map((player) => {
+              const isEliminated = eliminated.includes(player.name);
+              const isActive = player.name === currentContestant;
+              return (
+                <div
+                  key={player.id}
+                  className={isEliminated ? "opacity-40" : ""}
+                >
+                  <div className="mb-2">
+                    <p className="text-sm font-bold text-white leading-tight">
+                      {player.name}
+                    </p>
+                    {isEliminated && (
+                      <span className="text-[11px] text-red-400 font-bold">
+                        ✕ Eliminated
+                      </span>
+                    )}
+                    {isActive && !isEliminated && (
+                      <span className="text-[11px] text-[#A100FF] font-bold">
+                        ● Active
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    {player.questions.map((q) => {
+                      const isActiveQ = activeQuestion?.id === q.id;
+                      return (
+                        <div
+                          key={q.id}
+                          onClick={() =>
+                            !isEliminated && handleSetActiveQuestion(q)
+                          }
+                          className={`relative rounded-lg p-5 transition-all ${
+                            isEliminated
+                              ? "pointer-events-none bg-[#1A1A1A] border border-[#333]"
+                              : isActiveQ
+                                ? "border-2 border-[#A100FF] bg-[#1A1A1A] cursor-pointer"
+                                : "bg-[#1A1A1A] border border-[#333] hover:border-[#A100FF]/50 cursor-pointer"
+                          }`}
+                        >
+                          <span
+                            className={`text-[16px] font-bold uppercase capitalize ${
+                              q.difficulty === "easy"
+                                ? "text-green-400"
+                                : q.difficulty === "medium"
+                                  ? "text-amber-400"
+                                  : "text-red-400"
+                            }`}
+                          >
+                            {q.difficulty}
+                          </span>
+                          <p className="text-[14px] text-gray-300 mt-2 line-clamp-2 leading-snug">
+                            {q.question}
+                          </p>
+                          <div
+                            className={`absolute bottom-2 right-2 w-2.5 h-2.5 rounded-full border ${
+                              isActiveQ
+                                ? "bg-[#A100FF] border-[#A100FF]"
+                                : "border-[#555]"
+                            }`}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );

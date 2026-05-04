@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useGameStore } from "@/store/gameStore";
+import { useGameStore, SPIN_DURATION } from "@/store/gameStore";
 import { useBroadcastSync } from "@/hooks/useBroadcastSync";
 import { useScreenAudio } from "@/hooks/useScreenAudio";
-import {
-  QUESTIONS,
-  PRIZE_LADDER,
-  SAFE_LEVELS,
-  Question,
-} from "@/data/mockData";
-import { SPIN_DURATION } from "@/store/gameStore";
-import SpinningWheel from "@/components/SpinningWheel";
+import { ALL_PLAYERS, PlayerQuestion } from "@/data/mockData";
+import SlotDrum from "@/components/SlotDrum";
+
+const ROUND_LABELS: Record<number, string> = {
+  0: "Easy",
+  1: "Medium",
+  2: "Hard",
+};
 
 const LABELS = ["A", "B", "C", "D"];
 
@@ -98,6 +98,83 @@ function WaitingScreen({
           Click to enable audio
         </button>
       )}
+    </div>
+  );
+}
+
+// ── Intermission ───────────────────────────────────────────────────────────────
+
+function IntermissionScreen() {
+  return (
+    <div className="flex flex-col items-center min-h-screen bg-black">
+      {/* Accenture logo */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 0,
+          paddingTop: "4vh",
+        }}
+      >
+        <span
+          style={{
+            color: "#A100FF",
+            fontWeight: 700,
+            fontSize: "1.8vw",
+            lineHeight: 1,
+            marginBottom: "-18px",
+            marginLeft: "118px",
+          }}
+        >
+          &gt;
+        </span>
+        <span
+          style={{
+            color: "white",
+            fontWeight: 700,
+            fontSize: "2.5vw",
+            letterSpacing: "0.02em",
+            fontFamily: "sans-serif",
+            lineHeight: 1,
+          }}
+        >
+          accenture
+        </span>
+      </div>
+
+      {/* Centered content */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-[3vh]">
+        <p
+          className="font-black text-white uppercase tracking-[0.12em] leading-none"
+          style={{ fontSize: "6vw" }}
+        >
+          GET READY...
+        </p>
+        <p
+          className="text-[#666666] tracking-widest"
+          style={{ fontSize: "1.6vw" }}
+        >
+          Next question coming up
+        </p>
+        <div className="flex gap-4 mt-[2vh]">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="inline-block w-4 h-4 rounded-full bg-[#A100FF]"
+              style={{
+                animation: `pulse 1.4s ease-in-out ${i * 0.22}s infinite`,
+              }}
+            />
+          ))}
+        </div>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 0.2; transform: scale(0.8); }
+            50%       { opacity: 1;   transform: scale(1.2); }
+          }
+        `}</style>
+      </div>
     </div>
   );
 }
@@ -227,11 +304,11 @@ function SlotMachine({
 
   return (
     <div
-      style={{ height: windowH }}
-      className="relative rounded-xl border-2 border-[#A100FF] bg-black overflow-hidden shadow-[0_0_28px_rgba(161,0,255,0.35)]"
+    // style={{ height: windowH }}
+    // className="relative rounded-xl border-2 border-[#A100FF] bg-black overflow-hidden shadow-[0_0_28px_rgba(161,0,255,0.35)]"
     >
       {/* scrolling strip */}
-      <div
+      {/* <div
         style={{
           transform: `translateY(${translateY}px)`,
           height: totalH,
@@ -261,7 +338,7 @@ function SlotMachine({
             </div>
           );
         })}
-      </div>
+      </div> */}
 
       {/* top fade */}
       <div
@@ -294,27 +371,14 @@ function SlotMachine({
 function WheelPhaseScreen() {
   const {
     phase,
-    allPlayers,
     currentContestant,
-    wheelPlayers,
-    wheelTargetRotation,
-    wheelRotation,
     spinRound,
     selectedPlayers,
     eliminated,
+    wheelPlayers,
   } = useGameStore();
 
-  const [wheelSize, setWheelSize] = useState(600);
-  useEffect(() => {
-    const calc = () =>
-      setWheelSize(Math.min(window.innerWidth, window.innerHeight) * 0.68);
-    calc();
-    window.addEventListener("resize", calc);
-    return () => window.removeEventListener("resize", calc);
-  }, []);
-
   const spinning = phase === "spinning";
-  const targetRotation = spinning ? wheelTargetRotation : wheelRotation;
 
   return (
     <div style={{ position: "fixed", inset: 0 }} className="bg-black">
@@ -345,16 +409,15 @@ function WheelPhaseScreen() {
         className="flex flex-col items-center"
       >
         <SlotMachine
-          names={allPlayers}
+          names={wheelPlayers}
           spinning={spinning}
           finalName={spinning ? null : currentContestant}
         />
-        <SpinningWheel
+        <SlotDrum
           players={wheelPlayers}
-          targetRotation={targetRotation}
           spinning={spinning}
-          spinDuration={SPIN_DURATION}
-          size={wheelSize}
+          finalName={currentContestant}
+          //spinDuration={SPIN_DURATION}
         />
         <p
           style={{ fontSize: "1.2vw" }}
@@ -444,40 +507,121 @@ function SelectedScreen({ contestant }: { contestant: string | null }) {
 
 // ── Prize ladder ───────────────────────────────────────────────────────────────
 
-function PrizeLadder({ currentLevel }: { currentLevel: number }) {
-  const reversed = [...PRIZE_LADDER].reverse();
-  const lastIndex = PRIZE_LADDER.length - 1;
+const DIFFICULTY_LEVELS = ["Easy", "Medium", "Hard"];
 
+function PrizeLadder({ currentLevel }: { currentLevel: number }) {
   return (
-    <div className="flex flex-col gap-[3px] w-52 shrink-0 self-start pt-1">
-      {reversed.map((prize, ri) => {
-        const idx = lastIndex - ri;
+    <div className="flex flex-col gap-[6px] w-56 shrink-0 self-start pt-2">
+      {[...DIFFICULTY_LEVELS].reverse().map((label, ri) => {
+        const idx = DIFFICULTY_LEVELS.length - 1 - ri;
         const isCurrent = idx === currentLevel;
         const isAbove = idx > currentLevel;
-        const isSafe = SAFE_LEVELS.has(idx);
+
+        let fill = "transparent";
+        let stroke = "#333333";
+        let textColor = "text-white";
+
+        if (isCurrent) {
+          // colors handled by SVG gradient instead
+        } else if (isAbove) {
+          fill = "transparent";
+          stroke = "#333333";
+          textColor = "text-[#333333]";
+        } else {
+          fill = "#1A1A1A";
+          stroke = "#333333";
+        }
 
         return (
           <div
             key={idx}
-            className={`flex items-center justify-between px-3 py-[5px] rounded-lg text-xs font-bold transition-all duration-300 ${
-              isCurrent
-                ? "bg-[#A100FF] text-white shadow-[0_0_18px_rgba(161,0,255,0.6)] scale-[1.06] text-sm py-2"
-                : isSafe && !isAbove
-                  ? "bg-[#1A0030] border border-[#A100FF]/50 text-[#A100FF]"
-                  : isAbove
-                    ? "bg-transparent text-[#333333]"
-                    : "bg-[#1A1A1A] border border-[#333333] text-white"
+            className={`relative h-[36px] w-full ${
+              isCurrent ? "scale-[1.05]" : ""
             }`}
           >
-            <span className="opacity-50 w-5 text-right tabular-nums">
-              {idx + 1}
-            </span>
-            <span className="flex-1 text-right tabular-nums">
-              {prize.toLocaleString()}
-            </span>
-            {isSafe && !isCurrent && !isAbove && (
-              <span className="ml-1.5 text-[10px]">🔒</span>
+            {/* SVG background */}
+            {isCurrent ? (
+              <svg
+                viewBox="0 0 300 36"
+                preserveAspectRatio="none"
+                className="absolute inset-0 h-full w-full drop-shadow-[0_0_12px_rgba(255,180,0,0.6)]"
+              >
+                <defs>
+                  <linearGradient
+                    id={`goldGrad-${idx}`}
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="1"
+                  >
+                    <stop offset="0%" stopColor="#ffd54f" />
+                    <stop offset="50%" stopColor="#ffb300" />
+                    <stop offset="100%" stopColor="#ff8f00" />
+                  </linearGradient>
+
+                  <linearGradient
+                    id={`goldStroke-${idx}`}
+                    x1="0"
+                    y1="0"
+                    x2="1"
+                    y2="0"
+                  >
+                    <stop offset="0%" stopColor="#fff8e1" />
+                    <stop offset="100%" stopColor="#ffcc80" />
+                  </linearGradient>
+                </defs>
+
+                <path
+                  d="
+                    M 260 4
+                    H 30
+                    C 20 4 12 18 4 18
+                    C 12 18 20 32 30 32
+                    H 260
+                    C 270 32 278 18 296 18
+                    C 278 18 270 4 260 4
+                    Z
+                  "
+                  fill={`url(#goldGrad-${idx})`}
+                  stroke={`url(#goldStroke-${idx})`}
+                  strokeWidth="2.5"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ) : (
+              <svg
+                viewBox="0 0 300 36"
+                preserveAspectRatio="none"
+                className="absolute inset-0 h-full w-full"
+              >
+                <path
+                  d="
+                    M 260 4
+                    H 30
+                    C 20 4 12 18 4 18
+                    C 12 18 20 32 30 32
+                    H 260
+                    C 270 32 278 18 296 18
+                    C 278 18 270 4 260 4
+                    Z
+                  "
+                  fill={fill}
+                  stroke={stroke}
+                  strokeWidth="2"
+                  strokeLinejoin="round"
+                />
+              </svg>
             )}
+
+            {/* CONTENT */}
+            <div
+              className={`relative z-10 flex items-center justify-between px-4 h-full text-xs font-bold ${textColor}`}
+            >
+              <span className="opacity-60 w-6 pl-1  tabular-nums">
+                {idx + 1}
+              </span>
+              <span className="flex-1 capitalize">{label}</span>
+            </div>
           </div>
         );
       })}
@@ -490,6 +634,7 @@ function PrizeLadder({ currentLevel }: { currentLevel: number }) {
 function AnswerButton({
   label,
   text,
+  side,
   isCorrect,
   isRevealed,
   isHidden,
@@ -497,43 +642,98 @@ function AnswerButton({
 }: {
   label: string;
   text: string;
+  side: "left" | "right";
   isCorrect: boolean;
   isRevealed: boolean;
   isHidden: boolean;
   isPlayerAnswer: boolean;
 }) {
-  if (isHidden) return <div />;
+  if (isHidden) {
+    return <div className="h-[72px] opacity-20" />;
+  }
 
-  const base =
-    "flex items-center gap-5 w-full px-7 py-4 rounded-full border-2 transition-all duration-500 min-h-[68px]";
+  let fill = "#070018";
+  let stroke = "#d7d2ff";
+  let shadow = "";
 
-  let look: string;
   if (isRevealed) {
     if (isCorrect) {
-      look = `${base} bg-green-600 border-green-300 shadow-[0_0_26px_rgba(34,197,94,0.5)]`;
+      fill = "#00c853";
+      stroke = "#b9f6ca";
+      shadow = "drop-shadow-[0_0_18px_rgba(0,255,170,0.7)]";
     } else if (isPlayerAnswer) {
-      look = `${base} bg-red-700 border-red-400 shadow-[0_0_26px_rgba(239,68,68,0.5)]`;
+      fill = "#d50000";
+      stroke = "#ff8a80";
+      shadow = "drop-shadow-[0_0_18px_rgba(255,0,0,0.7)]";
     } else {
-      look = `${base} bg-[#1A1A1A] border-[#333333] opacity-20`;
+      fill = "#070018";
+      stroke = "#2a2545";
+      shadow = "opacity-30";
     }
-  } else {
-    look = isPlayerAnswer
-      ? `${base} bg-[#A100FF] border-[#A100FF] shadow-[0_0_26px_rgba(161,0,255,0.5)]`
-      : `${base} bg-[#1A1A1A] border-[#333333]`;
+  } else if (isPlayerAnswer) {
+    fill = "#ff8a00";
+    stroke = "#ffd180";
+    shadow = "drop-shadow-[0_0_18px_rgba(255,138,0,0.7)]";
   }
 
   return (
-    <div className={look}>
-      <span className="text-xl font-extrabold text-[#A100FF] w-7 shrink-0">
-        {label}
-      </span>
-      <span className="text-lg font-semibold text-white leading-snug">
-        {text}
-      </span>
+    <div className={`relative z-10 h-[72px] w-full ${shadow}`}>
+      <svg
+        viewBox="0 0 600 72"
+        preserveAspectRatio="none"
+        className="absolute inset-0 h-full w-full"
+      >
+        <path
+          d="
+            M 480 6
+            H 120
+            C 95 6 80 36 55 36
+            C 80 36 95 66 120 66
+            H 480
+            C 505 66 520 36 545 36
+            C 520 36 505 6 480 6
+            Z
+          "
+          fill={fill}
+          stroke={stroke}
+          strokeWidth="3"
+          strokeLinejoin="round"
+        />
+
+        {/* only draw OUTER connector lines */}
+        {side === "left" && (
+          <line
+            x1="0"
+            y1="36"
+            x2="55"
+            y2="36"
+            stroke={stroke}
+            strokeWidth="3"
+          />
+        )}
+
+        {side === "right" && (
+          <line
+            x1="545"
+            y1="36"
+            x2="600"
+            y2="36"
+            stroke={stroke}
+            strokeWidth="3"
+          />
+        )}
+      </svg>
+
+      <div className="relative z-10 flex h-full items-center gap-5 px-28">
+        <span className="w-10 shrink-0 text-xl font-extrabold text-[#ff8a00]">
+          {label}:
+        </span>
+
+        <span className="text-lg font-semibold text-white">{text}</span>
+      </div>
     </div>
   );
 }
-
 // ── AI Colleague overlay ───────────────────────────────────────────────────────
 
 const THINKING_STRINGS = [
@@ -546,12 +746,11 @@ const THINKING_STRINGS = [
 function AIColleagueOverlay({
   aiThinking,
   aiReveal,
-  question,
 }: {
   aiThinking: boolean;
   aiReveal: boolean;
-  question: Question | undefined;
 }) {
+  const { activeQuestion, aiWrongAnswer } = useGameStore();
   const [thinkingText, setThinkingText] = useState(THINKING_STRINGS[0]);
   const [dotPhase, setDotPhase] = useState(0);
 
@@ -573,9 +772,9 @@ function AIColleagueOverlay({
 
   if (!aiThinking && !aiReveal) return null;
 
-  const correctIdx = question?.correct ?? 0;
-  const correctLabel = LABELS[correctIdx];
-  const correctText = question?.answers[correctIdx] ?? "";
+  console.log(aiWrongAnswer);
+  const wrongText = activeQuestion?.answers[aiWrongAnswer ?? 0] ?? "";
+  const wrongLabel = ["A", "B", "C", "D"][aiWrongAnswer ?? 0];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
@@ -638,10 +837,10 @@ function AIColleagueOverlay({
               }}
             >
               <span className="text-4xl font-extrabold text-[#A100FF]">
-                {correctLabel}
+                {wrongLabel}
               </span>
               <span className="text-3xl font-bold text-green-300 leading-snug">
-                {correctText}
+                {wrongText}
               </span>
             </div>
           </>
@@ -654,134 +853,278 @@ function AIColleagueOverlay({
 // ── Game screen (quiz phase) ───────────────────────────────────────────────────
 
 function GameScreen({
-  question,
   revealAnswer,
-  currentLevel,
   currentContestant,
-  usedLifelines,
-  hiddenAnswers,
   playerAnswer,
   aiThinking,
   aiReveal,
 }: {
-  question: Question;
   revealAnswer: boolean;
-  currentLevel: number;
   currentContestant: string | null;
-  usedLifelines: string[];
-  hiddenAnswers: number[];
   playerAnswer: number | null;
   aiThinking: boolean;
   aiReveal: boolean;
 }) {
-  const lifelines = [
-    { id: "5050", label: "50:50", emoji: "✂️" },
-    { id: "skip", label: "Skip", emoji: "⏭" },
-    { id: "ai", label: "AI Colleague", emoji: "🤖" },
-  ];
-
+  const { activeQuestion, hiddenAnswers, usedLifelines } = useGameStore();
+  if (!activeQuestion) return null;
   return (
-    <div className="flex flex-col min-h-screen bg-black">
-      <header className="flex items-center justify-between px-10 py-5 border-b border-[#333333]">
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-[#050017] text-white">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,#38108f_0%,#08001f_38%,#010006_75%)] opacity-90" />
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_58%,rgba(255,255,255,0.22),transparent_18%)]" />
+
+      <header className="relative z-10 flex items-center justify-between px-10 py-5">
         <div className="flex gap-3">
-          {lifelines.map(({ id, label, emoji }) => (
-            <div
-              key={id}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-full border-2 font-bold text-base tracking-wide transition-all ${
-                usedLifelines.includes(id)
-                  ? "bg-transparent border-[#333333] text-[#333333] line-through opacity-40"
-                  : "bg-[#1A1A1A] border-[#A100FF] text-[#A100FF]"
-              }`}
-            >
-              <span className="text-lg">{emoji}</span>
-              <span>{label}</span>
-            </div>
-          ))}
+          {[
+            { label: "50:50", emoji: "✂️", id: "5050" },
+            { label: "AI Colleague", emoji: "🤖", id: "ai" },
+          ].map(({ label, emoji, id }) => {
+            const used = usedLifelines.includes(id);
+
+            return (
+              <div
+                key={label}
+                className={`flex items-center gap-2 rounded-full border-2 px-5 py-2.5 text-base font-bold tracking-wide shadow-[0_0_18px_rgba(255,255,255,0.18)] ${
+                  used
+                    ? "border-slate-600 bg-[#120d25] text-slate-500 opacity-45 line-through"
+                    : "border-[#d7d2ff] bg-[#10002c] text-[#f2eaff]"
+                }`}
+              >
+                <span className="text-lg">{used ? "✕" : emoji}</span>
+                <span>{label}</span>
+              </div>
+            );
+          })}
         </div>
+
         <div className="text-right">
-          <p className="text-xs text-[#666666] uppercase tracking-[0.2em]">
+          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">
             Contestant
           </p>
-          <p className="text-3xl font-extrabold text-[#A100FF] tracking-wide">
+          <p className="text-3xl font-extrabold tracking-wide text-[#f2eaff] drop-shadow-[0_0_12px_rgba(255,255,255,0.35)]">
             {currentContestant}
           </p>
         </div>
       </header>
 
-      <main className="flex flex-1 gap-6 px-10 py-6">
-        <div className="flex-1 flex flex-col justify-center gap-10">
-          <div className="text-center space-y-3 px-4">
-            <p className="text-sm text-[#A100FF] tracking-[0.25em] uppercase">
-              Question {currentLevel + 1} —{" "}
-              {PRIZE_LADDER[currentLevel]?.toLocaleString()}
+      <main className="relative z-10 flex flex-1 gap-8 px-8 pb-12 pt-8">
+        <div className="flex flex-1 flex-col justify-end gap-8 pb-10">
+          <div className="mx-auto w-full max-w-6xl">
+            <p className="mb-3 text-center text-sm uppercase tracking-[0.35em] text-[#ff8a00]">
+              {activeQuestion?.difficulty ?? "—"}
             </p>
-            <p className="text-4xl font-bold text-white leading-snug tracking-wide">
-              {question.text}
-            </p>
+
+            <div className="relative w-full max-w-5xl mx-auto h-[120px]">
+              {/* SVG background */}
+              <svg
+                viewBox="0 0 800 120"
+                preserveAspectRatio="none"
+                className="absolute inset-0 h-full w-full"
+              >
+                <path
+                  d="
+        M 680 10
+        H 120
+        C 90 10 70 60 40 60
+        C 70 60 90 110 120 110
+        H 680
+        C 710 110 730 60 760 60
+        C 730 60 710 10 680 10
+        Z
+      "
+                  fill="#070018"
+                  stroke="#d7d2ff"
+                  strokeWidth="4"
+                  strokeLinejoin="round"
+                />
+
+                {/* connector lines */}
+                <line
+                  x1="760"
+                  y1="60"
+                  x2="800"
+                  y2="60"
+                  stroke="#d7d2ff"
+                  strokeWidth="4"
+                />
+                <line
+                  x1="0"
+                  y1="60"
+                  x2="40"
+                  y2="60"
+                  stroke="#d7d2ff"
+                  strokeWidth="4"
+                />
+              </svg>
+
+              {/* TEXT */}
+              <div className="relative z-10 flex h-full items-center justify-center px-20 text-center">
+                <p className="text-4xl font-semibold leading-snug tracking-wide text-white">
+                  {activeQuestion?.question}
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 max-w-3xl mx-auto w-full">
-            {question.answers.map((answer, idx) => (
-              <AnswerButton
-                key={idx}
-                label={LABELS[idx]}
-                text={answer}
-                isCorrect={idx === question.correct}
-                isRevealed={revealAnswer}
-                isHidden={hiddenAnswers.includes(idx)}
-                isPlayerAnswer={idx === playerAnswer}
-              />
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+            {[0, 2].map((start) => (
+              <div key={start} className="relative grid grid-cols-2 gap-x-20">
+                {/* middle connector between left and right answers */}
+                <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[3px] w-48 -translate-x-1/2 -translate-y-1/2 bg-[#d7d2ff]" />
+
+                {activeQuestion.answers
+                  .slice(start, start + 2)
+                  .map((answer, i) => {
+                    const idx = start + i;
+
+                    return (
+                      <AnswerButton
+                        key={idx}
+                        label={LABELS[idx]}
+                        text={answer}
+                        side={i === 0 ? "left" : "right"}
+                        isCorrect={idx === activeQuestion.correct}
+                        isRevealed={revealAnswer}
+                        isHidden={hiddenAnswers.includes(idx)}
+                        isPlayerAnswer={idx === playerAnswer}
+                      />
+                    );
+                  })}
+              </div>
             ))}
           </div>
         </div>
 
-        <PrizeLadder currentLevel={currentLevel} />
+        <PrizeLadder
+          currentLevel={activeQuestion ? activeQuestion.round - 1 : 0}
+        />
       </main>
 
-      <AIColleagueOverlay
-        aiThinking={aiThinking}
-        aiReveal={aiReveal}
-        question={question}
-      />
+      <AIColleagueOverlay aiThinking={aiThinking} aiReveal={aiReveal} />
+    </div>
+  );
+}
+
+// ── Winner screen ──────────────────────────────────────────────────────────────
+
+function WinnerScreen({ name }: { name: string | null }) {
+  return (
+    <div className="flex flex-col items-center min-h-screen bg-black overflow-hidden relative">
+      <style>{`
+        @keyframes confettiFall {
+          0%   { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+        @keyframes winnerName {
+          0%   { opacity: 0; transform: scale(0.5); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        .confetti-piece {
+          position: absolute;
+          top: 0;
+          width: 12px;
+          height: 18px;
+          border-radius: 3px;
+          animation: confettiFall linear infinite;
+        }
+        .winner-name {
+          animation: winnerName 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+      `}</style>
+
+      {/* Confetti */}
+      {[
+        { left: "5%", delay: "0s", dur: "3.2s", color: "#A100FF" },
+        { left: "10%", delay: "0.4s", dur: "2.8s", color: "#FFD700" },
+        { left: "16%", delay: "0.1s", dur: "3.5s", color: "#00E5FF" },
+        { left: "22%", delay: "0.7s", dur: "2.6s", color: "#FF4081" },
+        { left: "28%", delay: "0.3s", dur: "3.1s", color: "#A100FF" },
+        { left: "34%", delay: "0.9s", dur: "2.9s", color: "#69FF47" },
+        { left: "40%", delay: "0.2s", dur: "3.4s", color: "#FFD700" },
+        { left: "46%", delay: "0.6s", dur: "2.7s", color: "#FF4081" },
+        { left: "52%", delay: "0.0s", dur: "3.0s", color: "#A100FF" },
+        { left: "58%", delay: "0.5s", dur: "3.3s", color: "#00E5FF" },
+        { left: "64%", delay: "0.8s", dur: "2.5s", color: "#69FF47" },
+        { left: "70%", delay: "0.15s", dur: "3.6s", color: "#FFD700" },
+        { left: "76%", delay: "0.45s", dur: "2.8s", color: "#FF4081" },
+        { left: "82%", delay: "0.65s", dur: "3.2s", color: "#A100FF" },
+        { left: "88%", delay: "0.25s", dur: "2.9s", color: "#00E5FF" },
+        { left: "93%", delay: "0.75s", dur: "3.1s", color: "#69FF47" },
+        { left: "12%", delay: "1.1s", dur: "2.7s", color: "#FFD700" },
+        { left: "37%", delay: "1.3s", dur: "3.4s", color: "#FF4081" },
+        { left: "61%", delay: "1.0s", dur: "2.6s", color: "#A100FF" },
+        { left: "85%", delay: "1.2s", dur: "3.0s", color: "#69FF47" },
+      ].map((p, i) => (
+        <div
+          key={i}
+          className="confetti-piece"
+          style={{
+            left: p.left,
+            backgroundColor: p.color,
+            animationDelay: p.delay,
+            animationDuration: p.dur,
+          }}
+        />
+      ))}
+
+      {/* Accenture logo */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 0,
+          paddingTop: "4vh",
+        }}
+      >
+        <span
+          style={{
+            color: "#A100FF",
+            fontWeight: 700,
+            fontSize: "1.8vw",
+            lineHeight: 1,
+            marginBottom: "-18px",
+            marginLeft: "118px",
+          }}
+        >
+          &gt;
+        </span>
+        <span
+          style={{
+            color: "white",
+            fontWeight: 700,
+            fontSize: "2.5vw",
+            letterSpacing: "0.02em",
+            fontFamily: "sans-serif",
+            lineHeight: 1,
+          }}
+        >
+          accenture
+        </span>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-[3vh]">
+        <div style={{ fontSize: "12vw", lineHeight: 1 }}>🏆</div>
+        <p
+          className="font-black text-white uppercase tracking-[0.12em]"
+          style={{ fontSize: "6vw" }}
+        >
+          WINNER!
+        </p>
+        <p
+          className="winner-name font-black uppercase tracking-[0.06em]"
+          style={{ fontSize: "8vw", color: "#A100FF" }}
+        >
+          {name}
+        </p>
+      </div>
     </div>
   );
 }
 
 // ── Done screen ────────────────────────────────────────────────────────────────
 
-function DoneScreen({
-  winner,
-  eliminated,
-  currentLevel,
-}: {
-  winner: string | null;
-  eliminated: string | null;
-  currentLevel: number;
-}) {
-  if (winner !== null) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-black">
-        <div className="text-center space-y-6">
-          <div className="text-9xl animate-bounce">🏆</div>
-          <p className="text-5xl font-extrabold text-[#A100FF] tracking-widest uppercase">
-            We Have a Winner!
-          </p>
-          <p className="text-7xl font-extrabold text-white tracking-wide">
-            {winner}
-          </p>
-          <div className="mt-6 px-16 py-8 bg-[#A100FF] rounded-3xl shadow-[0_0_70px_rgba(161,0,255,0.6)]">
-            <p className="text-2xl font-bold text-white uppercase tracking-widest">
-              Wins
-            </p>
-            <p className="text-8xl font-extrabold text-white leading-none">
-              {PRIZE_LADDER[currentLevel]?.toLocaleString()}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+function DoneScreen({ eliminated }: { eliminated: string | null }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-black">
       <div className="text-center space-y-6 px-12">
@@ -807,29 +1150,23 @@ export default function ScreenPage() {
   const {
     phase,
     screenVisible,
-    selectedPlayers,
-    eliminated,
     currentContestant,
-    currentQuestionIndex,
+    winnerName,
+    activeQuestion,
     revealAnswer,
-    currentLevel,
-    usedLifelines,
-    hiddenAnswers,
-    winner,
     playerAnswer,
     aiThinking,
     aiReveal,
+    usedLifelines,
   } = useGameStore();
-
-  const question = QUESTIONS[currentQuestionIndex];
 
   useScreenAudio({
     phase,
     screenVisible,
     revealAnswer,
     playerAnswer,
-    currentQuestionCorrect: question?.correct ?? 0,
-    currentLevel,
+    currentQuestionCorrect: activeQuestion?.correct ?? 0,
+    currentLevel: activeQuestion?.round ?? 1,
     usedLifelines,
     audioEnabled,
   });
@@ -853,12 +1190,8 @@ export default function ScreenPage() {
   if (phase === "quiz") {
     return (
       <GameScreen
-        question={question}
         revealAnswer={revealAnswer}
-        currentLevel={currentLevel}
         currentContestant={currentContestant}
-        usedLifelines={usedLifelines}
-        hiddenAnswers={hiddenAnswers}
         playerAnswer={playerAnswer}
         aiThinking={aiThinking}
         aiReveal={aiReveal}
@@ -866,14 +1199,16 @@ export default function ScreenPage() {
     );
   }
 
+  if (phase === "intermission") {
+    return <IntermissionScreen />;
+  }
+
+  if (phase === "winner") {
+    return <WinnerScreen name={winnerName} />;
+  }
+
   if (phase === "done") {
-    return (
-      <DoneScreen
-        winner={winner}
-        eliminated={currentContestant}
-        currentLevel={currentLevel}
-      />
-    );
+    return <DoneScreen eliminated={currentContestant} />;
   }
 
   return (

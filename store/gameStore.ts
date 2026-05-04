@@ -1,288 +1,194 @@
 import { create } from "zustand";
-import { ALL_PLAYERS, QUESTIONS, PRIZE_LADDER } from "@/data/mockData";
+import { ALL_PLAYERS, PLAYERS, PlayerQuestion } from "@/data/mockData";
 
-export type Phase = "idle" | "spinning" | "selected" | "quiz" | "done";
+export type Phase = "idle" | "spinning" | "selected" | "quiz" | "intermission" | "done" | "winner";
 
-export const SPIN_DURATION = 4200;
-const SPIN_BUFFER = 900;
+export const SPIN_DURATION = 4000;
 
-const MIN_EXTRA_SPINS = 5;
-const WHEEL_SEGMENT_COUNT = 16;
-const WHEEL_SEGMENTS = Array.from({ length: WHEEL_SEGMENT_COUNT }, (_, i) =>
-  String(i + 1),
-);
-
-function calcTargetRotation(
-  targetIndex: number,
-  numPlayers: number,
-  currentRotation: number,
-): number {
-  const segDeg = 360 / numPlayers;
-  const base = (((-targetIndex * segDeg) % 360) + 360) % 360;
-  const minDest = currentRotation + MIN_EXTRA_SPINS * 360;
-  const k = Math.ceil((minDest - base) / 360);
-  return base + k * 360;
-}
-
-// ── Serialisable game data (broadcast over BroadcastChannel) ──────────────────
+const WHEEL_NAMES = [
+  'Lars Svensson', 'Emma Nilsson', 'Johan Eriksson', 'Maria Larsson',
+  'Anders Karlsson', 'Sofia Andersson', 'Mikael Lindström', 'Klara Persson',
+  'Oskar Gustafsson', 'Maja Olsson', 'Filip Johansson', 'Hanna Pettersson',
+  'Gustav Magnusson', 'Lina Björk', 'Erik Holm', 'Sara Lindgren',
+  'Tobias Berg', 'Astrid Nyström', 'Viktor Strand', 'Ida Forsgren',
+];
 
 export interface GameData {
   phase: Phase;
-
-  // Players
-  allPlayers: string[];
-  selectedPlayers: string[];
-  eliminated: string[];
-  currentContestant: string | null;
-
-  // Wheel
-  wheelPlayers: string[]; // fixed decorative segments
-  wheelRotation: number;
+  wheelSpinning: boolean;
   wheelTargetRotation: number;
   spinRound: number;
-
-  // Quiz
-  currentQuestionIndex: number;
-  revealAnswer: boolean;
-  currentLevel: number;
-
-  // Lifelines
-  usedLifelines: string[];
-  hiddenAnswers: number[];
-
-  // End state
-  gameOver: boolean;
-  winner: string | null;
-
-  // Screen visibility
-  screenVisible: boolean;
-
-  // Player's chosen answer
+  selectedPlayers: string[];
+  currentContestant: string | null;
+  eliminated: string[];
+  activeQuestion: PlayerQuestion | null;
   playerAnswer: number | null;
-
-  // AI Colleague lifeline state
+  revealAnswer: boolean;
   aiThinking: boolean;
   aiReveal: boolean;
-
-  // Admin-only: secretly pre-select the spin winner (never broadcast)
-  forcedWinner?: string | null;
+  aiWrongAnswer: number | null;
+  hiddenAnswers: number[];
+  usedLifelines: string[];
+  winnerName: string | null;
+  forcedWinner: string | null;
+  screenVisible: boolean;
+  wheelPlayers: string[];
 }
 
 interface GameActions {
   spinOnce: () => void;
-  setForcedWinner: (name: string | null) => void;
-  startQuiz: () => void;
-  nextPlayer: () => void;
-  correctAnswer: () => void;
-  nextQuestion: () => void;
-  eliminateContestant: () => void;
-  revealCurrentAnswer: () => void;
-  useLifeline5050: () => void;
-  useLifelineSkip: () => void;
-  useLifelineAI: () => void;
-  selectPlayerAnswer: (index: number) => void;
   showScreen: () => void;
+  setForcedWinner: (n: string | null) => void;
+  setActiveQuestion: (q: PlayerQuestion) => void;
+  selectPlayerAnswer: (i: number) => void;
+  revealCurrentAnswer: () => void;
+  markCorrect: () => void;
+  markWrong: () => void;
+  nextPlayer: () => void;
+  readyForNextSpin: () => void;
+  startQuiz: () => void;
   resetGame: () => void;
+  useLifelineAI: () => void;
+  use5050: () => void;
   syncState: (data: GameData) => void;
 }
 
 export type GameStore = GameData & GameActions;
 
-// ── Initial state ─────────────────────────────────────────────────────────────
-
 const initialData: GameData = {
   phase: "idle",
-  allPlayers: ALL_PLAYERS,
-  selectedPlayers: [],
-  eliminated: [],
-  currentContestant: null,
-
-  wheelPlayers: WHEEL_SEGMENTS,
-  wheelRotation: 0,
+  wheelSpinning: false,
   wheelTargetRotation: 0,
   spinRound: 0,
-
-  currentQuestionIndex: 0,
-  revealAnswer: false,
-  currentLevel: 0,
-
-  usedLifelines: [],
-  hiddenAnswers: [],
-
-  gameOver: false,
-  winner: null,
-
-  screenVisible: false,
-
+  selectedPlayers: [],
+  currentContestant: null,
+  eliminated: [],
+  activeQuestion: null,
   playerAnswer: null,
-
+  revealAnswer: false,
   aiThinking: false,
   aiReveal: false,
-
+  aiWrongAnswer: null,
+  hiddenAnswers: [],
+  usedLifelines: [],
+  winnerName: null,
   forcedWinner: null,
+  screenVisible: false,
+  wheelPlayers: WHEEL_NAMES,
 };
-
-// ── Store ─────────────────────────────────────────────────────────────────────
 
 export const useGameStore = create<GameStore>((set, get) => ({
   ...initialData,
 
-  // ── Wheel ────────────────────────────────────────────────────────────────────
-
   spinOnce: () => {
     const state = get();
     if (state.phase !== "idle") return;
+    const remaining = ALL_PLAYERS.filter(
+      (p) => !state.selectedPlayers.includes(p),
+    );
+    if (remaining.length === 0) return;
+    const winner =
+      state.forcedWinner && remaining.includes(state.forcedWinner)
+        ? state.forcedWinner
+        : remaining[Math.floor(Math.random() * remaining.length)];
 
-    const n = WHEEL_SEGMENT_COUNT;
-    const targetIndex = Math.floor(Math.random() * n);
-    const targetRot = calcTargetRotation(targetIndex, n, state.wheelRotation);
-
-    set({ phase: "spinning", wheelTargetRotation: targetRot });
+    set({ wheelSpinning: true, phase: "spinning" });
 
     setTimeout(() => {
       const curr = get();
-
-      const remaining = curr.allPlayers.filter(
-        (p) => !curr.selectedPlayers.includes(p),
-      );
-      if (remaining.length === 0) return;
-      const selectedPlayer =
-        curr.forcedWinner && remaining.includes(curr.forcedWinner)
-          ? curr.forcedWinner
-          : remaining[Math.floor(Math.random() * remaining.length)];
-
       set({
-        phase: "selected",
-        wheelRotation: targetRot,
-        currentContestant: selectedPlayer,
-        selectedPlayers: [...curr.selectedPlayers, selectedPlayer],
+        wheelSpinning: false,
+        currentContestant: winner,
+        selectedPlayers: [...curr.selectedPlayers, winner],
         spinRound: curr.spinRound + 1,
         forcedWinner: null,
+        phase: "selected",
       });
-    }, SPIN_DURATION + SPIN_BUFFER);
+    }, SPIN_DURATION);
   },
 
-  // ── selected → quiz ──────────────────────────────────────────────────────────
+  showScreen: () => set({ screenVisible: true }),
 
-  startQuiz: () =>
-    set({
-      phase: "quiz",
-      revealAnswer: false,
-      usedLifelines: [],
-      hiddenAnswers: [],
-      gameOver: false,
-      winner: null,
-      playerAnswer: null,
-    }),
+  setForcedWinner: (n) => set({ forcedWinner: n }),
 
-  // ── quiz actions ─────────────────────────────────────────────────────────────
+  setActiveQuestion: (q) =>
+    set({ activeQuestion: q, playerAnswer: null, revealAnswer: false, phase: "quiz", hiddenAnswers: [], aiThinking: false, aiReveal: false, aiWrongAnswer: null }),
+
+  selectPlayerAnswer: (i) => set({ playerAnswer: i, aiThinking: false, aiReveal: false, aiWrongAnswer: null }),
 
   revealCurrentAnswer: () => set({ revealAnswer: true }),
 
-  /** Player answered correctly — advance level then go to done. */
-  correctAnswer: () => {
-    const { currentLevel, currentContestant } = get();
-    const next = currentLevel + 1;
-    if (next >= PRIZE_LADDER.length || next >= QUESTIONS.length) {
-      set({ gameOver: true, winner: currentContestant, phase: "done" });
-      return;
+  markCorrect: () => {
+    const { activeQuestion, currentContestant } = get();
+    if (activeQuestion?.round === 3) {
+      set({ phase: "winner", winnerName: currentContestant, activeQuestion: null, playerAnswer: null, revealAnswer: false, hiddenAnswers: [], aiThinking: false, aiReveal: false, aiWrongAnswer: null });
+    } else {
+      set({ phase: "intermission", activeQuestion: null, playerAnswer: null, revealAnswer: false, hiddenAnswers: [], aiThinking: false, aiReveal: false, aiWrongAnswer: null });
     }
-    set({
-      currentQuestionIndex: next,
-      currentLevel: next,
-      revealAnswer: false,
-      hiddenAnswers: [],
-      playerAnswer: null,
-      phase: "done",
-    });
   },
 
-  nextQuestion: () => {
-    const { currentLevel, currentContestant } = get();
-    const next = currentLevel + 1;
-    if (next >= PRIZE_LADDER.length || next >= QUESTIONS.length) {
-      // Last question answered correctly — contestant wins
-      set({ winner: currentContestant, phase: "done" });
-      return;
-    }
-    // More questions remain — stay in quiz
-    set({
-      currentQuestionIndex: next,
-      currentLevel: next,
-      revealAnswer: false,
-      hiddenAnswers: [],
-      playerAnswer: null,
-      aiThinking: false,
-      aiReveal: false,
-      phase: "quiz",
-    });
-  },
-
-  eliminateContestant: () => {
+  markWrong: () => {
     const { currentContestant, eliminated } = get();
-    if (!currentContestant) return;
     set({
-      eliminated: [...eliminated, currentContestant],
-      winner: null,
-      revealAnswer: false,
-      hiddenAnswers: [],
+      eliminated: currentContestant ? [...eliminated, currentContestant] : eliminated,
+      activeQuestion: null,
       playerAnswer: null,
+      revealAnswer: false,
+      phase: "done",
+      hiddenAnswers: [],
+      usedLifelines: [],
       aiThinking: false,
       aiReveal: false,
-      phase: "done",
+      aiWrongAnswer: null,
     });
   },
-
-  // ── done → idle ──────────────────────────────────────────────────────────────
 
   nextPlayer: () =>
     set({
       phase: "idle",
       currentContestant: null,
+      winnerName: null,
+      activeQuestion: null,
       playerAnswer: null,
       revealAnswer: false,
+      hiddenAnswers: [],
+      usedLifelines: [],
+      aiThinking: false,
+      aiReveal: false,
+      aiWrongAnswer: null,
     }),
 
-  // ── Lifelines ────────────────────────────────────────────────────────────────
+  readyForNextSpin: () => set({ phase: "idle" }),
 
-  useLifeline5050: () => {
-    const { currentQuestionIndex, usedLifelines } = get();
-    if (usedLifelines.includes("5050")) return;
-    const question = QUESTIONS[currentQuestionIndex];
-    if (!question) return;
-    const wrong = ([0, 1, 2, 3] as const).filter((i) => i !== question.correct);
-    const shuffled = [...wrong].sort(() => Math.random() - 0.5);
-    set({
-      hiddenAnswers: shuffled.slice(0, 2),
-      usedLifelines: [...usedLifelines, "5050"],
-    });
-  },
-
-  useLifelineSkip: () => {
-    const { usedLifelines } = get();
-    if (usedLifelines.includes("skip")) return;
-    set({ usedLifelines: [...usedLifelines, "skip"] });
-    get().nextQuestion();
-  },
-
-  useLifelineAI: () => {
-    const { usedLifelines } = get();
-    if (usedLifelines.includes("ai")) return;
-    set({ usedLifelines: [...usedLifelines, "ai"], aiThinking: true, aiReveal: false });
-    setTimeout(() => {
-      set({ aiThinking: false, aiReveal: true });
-    }, 4000);
-  },
-
-  // ── Utility ──────────────────────────────────────────────────────────────────
-
-  setForcedWinner: (name) => set({ forcedWinner: name }),
-
-  selectPlayerAnswer: (index) => set({ playerAnswer: index, aiReveal: false }),
-
-  showScreen: () => set({ screenVisible: true }),
+  startQuiz: () => set((state) => ({ ...state, phase: "intermission" })),
 
   resetGame: () => set(initialData),
 
-  syncState: (data: GameData) => set(data),
+  useLifelineAI: () => {
+    const state = get();
+    if (state.usedLifelines.includes('ai')) return;
+    const correct = state.activeQuestion?.correct ?? 0;
+    const wrongOptions = [0, 1, 2, 3].filter(i => i !== correct);
+    const aiWrongAnswer = wrongOptions[Math.floor(Math.random() * wrongOptions.length)];
+    set({ aiThinking: true, aiReveal: false, aiWrongAnswer, usedLifelines: [...state.usedLifelines, 'ai'] });
+    setTimeout(() => set({ aiThinking: false, aiReveal: true }), 4000);
+  },
+
+  use5050: () => set((state) => {
+    if (!state.activeQuestion) return state;
+    if (state.usedLifelines.includes('5050')) return state;
+
+    const correct = state.activeQuestion.correct;
+    const wrongIndexes = [0, 1, 2, 3].filter(i => i !== correct);
+    const shuffled = wrongIndexes.sort(() => Math.random() - 0.5);
+    const toHide = [shuffled[0], shuffled[1]];
+
+    return {
+      ...state,
+      usedLifelines: [...state.usedLifelines, '5050'],
+      hiddenAnswers: toHide,
+    };
+  }),
+
+  syncState: (data) => set(data),
 }));
