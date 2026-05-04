@@ -622,6 +622,7 @@ function AnswerButton({
   isRevealed,
   isHidden,
   isPlayerAnswer,
+  isTrap,
 }: {
   label: string;
   text: string;
@@ -630,6 +631,7 @@ function AnswerButton({
   isRevealed: boolean;
   isHidden: boolean;
   isPlayerAnswer: boolean;
+  isTrap: boolean;
 }) {
   if (isHidden) {
     return <div className="h-[72px] opacity-20" />;
@@ -640,7 +642,7 @@ function AnswerButton({
   let shadow = "";
 
   if (isRevealed) {
-    if (isCorrect) {
+    if (!isTrap && isCorrect) {
       fill = "#00c853";
       stroke = "#b9f6ca";
       shadow = "drop-shadow-[0_0_18px_rgba(0,255,170,0.7)]";
@@ -833,6 +835,55 @@ function AIColleagueOverlay({
   );
 }
 
+// ── Circular timer ────────────────────────────────────────────────────────────
+
+function CircularTimer({ seconds }: { seconds: number }) {
+  const dotCount = 24;
+  const activeDots = Math.round((seconds / 30) * dotCount);
+  const cx = 40;
+  const cy = 40;
+  const r = 32;
+  const dotColors = ["#ef4444", "#f97316", "#22c55e"];
+  const textColor = seconds > 19 ? "#f59e0b" : seconds > 9 ? "#f97316" : "#ef4444";
+
+  const dots = Array.from({ length: dotCount }, (_, i) => {
+    const angle = (i / dotCount) * 2 * Math.PI - Math.PI / 2;
+    return {
+      x: cx + r * Math.cos(angle),
+      y: cy + r * Math.sin(angle),
+      active: i < activeDots,
+      color: dotColors[i % dotColors.length],
+    };
+  });
+
+  return (
+    <div style={{ width: 80, height: 80 }}>
+      {seconds === 0 && (
+        <style>{`
+          @keyframes timerFlash { 0%,100%{opacity:1} 50%{opacity:0.15} }
+        `}</style>
+      )}
+      <svg width="80" height="80" viewBox="0 0 80 80">
+        {dots.map(({ x, y, active, color }, i) => (
+          <circle key={i} cx={x} cy={y} r={3} fill={color} opacity={active ? 1 : 0.15} />
+        ))}
+        <text
+          x={cx}
+          y={cy}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill={textColor}
+          fontSize="22"
+          fontWeight="900"
+          style={seconds === 0 ? { animation: "timerFlash 0.5s ease-in-out infinite" } : undefined}
+        >
+          {seconds}
+        </text>
+      </svg>
+    </div>
+  );
+}
+
 // ── Game screen (quiz phase) ───────────────────────────────────────────────────
 
 function GameScreen({
@@ -848,7 +899,9 @@ function GameScreen({
   aiThinking: boolean;
   aiReveal: boolean;
 }) {
-  const { activeQuestion, hiddenAnswers, usedLifelines } = useGameStore();
+  const { activeQuestion, hiddenAnswers, usedLifelines, showTrapAnswer, timerSeconds } =
+    useGameStore();
+  console.log(showTrapAnswer);
   if (!activeQuestion) return null;
   return (
     <div className="relative flex min-h-screen flex-col overflow-hidden bg-[#050017] text-white">
@@ -856,7 +909,7 @@ function GameScreen({
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_58%,rgba(255,255,255,0.22),transparent_18%)]" />
 
       <header className="relative z-10 flex items-center justify-between px-10 py-5">
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
           {[
             { label: "50:50", emoji: "✂️", id: "5050" },
             { label: "AI Colleague", emoji: "🤖", id: "ai" },
@@ -877,6 +930,7 @@ function GameScreen({
               </div>
             );
           })}
+          <CircularTimer seconds={timerSeconds} />
         </div>
 
         <div className="text-right">
@@ -969,12 +1023,69 @@ function GameScreen({
                         isRevealed={revealAnswer}
                         isHidden={hiddenAnswers.includes(idx)}
                         isPlayerAnswer={idx === playerAnswer}
+                        isTrap={!!activeQuestion.trapAnswer}
                       />
                     );
                   })}
               </div>
             ))}
           </div>
+
+          {showTrapAnswer && activeQuestion.trapAnswer && (
+            <div
+              className="mx-auto w-full max-w-6xl"
+              style={{ animation: "trapReveal 0.6s ease-out forwards" }}
+            >
+              <style>{`
+                @keyframes trapReveal {
+                  0%   { opacity: 0; transform: translateY(24px); }
+                  100% { opacity: 1; transform: translateY(0); }
+                }
+              `}</style>
+              <p className="text-center text-xl font-extrabold text-red-500 tracking-widest uppercase mb-3">
+                THE CORRECT ANSWER WAS...
+              </p>
+              <div className="relative h-[90px] w-full drop-shadow-[0_0_28px_rgba(251,146,60,0.6)]">
+                <svg
+                  viewBox="0 0 600 90"
+                  preserveAspectRatio="none"
+                  className="absolute inset-0 h-full w-full"
+                >
+                  <path
+                    d="M 480 8 H 120 C 95 8 80 45 55 45 C 80 45 95 82 120 82 H 480 C 505 82 520 45 545 45 C 520 45 505 8 480 8 Z"
+                    fill="#431407"
+                    stroke="#fb923c"
+                    strokeWidth="3"
+                    strokeLinejoin="round"
+                  />
+                  <line
+                    x1="0"
+                    y1="45"
+                    x2="55"
+                    y2="45"
+                    stroke="#fb923c"
+                    strokeWidth="3"
+                  />
+                  <line
+                    x1="545"
+                    y1="45"
+                    x2="600"
+                    y2="45"
+                    stroke="#fb923c"
+                    strokeWidth="3"
+                  />
+                </svg>
+                <div className="relative z-10 flex h-full items-center gap-5 px-48">
+                  <span className="w-10 shrink-0 text-2xl font-extrabold text-amber-400">
+                    E:
+                  </span>
+                  <span className="text-2xl font-bold text-amber-200 ">
+                    {activeQuestion.trapAnswer}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <PrizeLadder

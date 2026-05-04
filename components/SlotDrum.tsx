@@ -49,7 +49,7 @@ export default function SlotDrum({
       const totalTicks = 45 + winnerIndex;
 
       // Solve: (startIndex + totalTicks) % n === winnerIndex
-      const startIndex = ((winnerIndex - (totalTicks % n)) % n + n) % n;
+      const startIndex = (((winnerIndex - (totalTicks % n)) % n) + n) % n;
 
       let delay = 200;
       let tick = 0;
@@ -101,7 +101,7 @@ export default function SlotDrum({
 
   const bars = Array.from({ length: VISIBLE }, (_, i) => {
     const offset = i - CENTER; // −4 to +4
-    const playerIdx = ((centerIndex + offset) % n + n) % n;
+    const playerIdx = (((centerIndex + offset) % n) + n) % n;
     const color = `hsl(${(playerIdx / n) * 360}, 90%, 60%)`;
     return { i, playerIdx, name: players[playerIdx], offset, color };
   });
@@ -119,15 +119,6 @@ export default function SlotDrum({
       }}
     >
       {/* Center selector window — white border highlight */}
-      <div
-        className="absolute inset-x-3 rounded-2xl border-2 border-white/80 pointer-events-none z-10"
-        style={{
-          top: "50%",
-          transform: "translateY(-50%)",
-          height: "8vh",
-          minHeight: 52,
-        }}
-      />
 
       {/* Bar strip */}
       <div className="flex flex-col items-center justify-center gap-3 w-full h-full px-3">

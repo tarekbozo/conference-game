@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { useBroadcastSync } from "@/hooks/useBroadcastSync";
 import { PLAYERS, ALL_PLAYERS, Player, PlayerQuestion } from "@/data/mockData";
@@ -39,6 +39,7 @@ export default function AdminPage() {
     setForcedWinner,
     forcedWinner,
     setActiveQuestion,
+    revealTrapAnswer,
     selectPlayerAnswer,
     revealCurrentAnswer,
     markCorrect,
@@ -54,7 +55,17 @@ export default function AdminPage() {
     wheelSpinning,
     screenVisible,
     spinRound,
+    timerActive,
+    startTimer,
+    stopTimer,
+    tickTimer,
   } = useGameStore();
+
+  useEffect(() => {
+    if (!timerActive) return;
+    const id = setInterval(() => tickTimer(), 1000);
+    return () => clearInterval(id);
+  }, [timerActive]);
 
   const availablePlayers = ALL_PLAYERS.filter(
     (p) => !selectedPlayers.includes(p),
@@ -221,9 +232,9 @@ export default function AdminPage() {
                   let cls =
                     "rounded-lg p-2 text-xs font-bold border transition-all text-center ";
                   if (revealAnswer) {
-                    if (idx === activeQuestion.correct) {
+                    if (!activeQuestion.trapAnswer && idx === activeQuestion.correct) {
                       cls += "bg-green-700 border-green-500 text-white";
-                    } else if (idx === playerAnswer) {
+                    } else if (!activeQuestion.trapAnswer && idx === playerAnswer) {
                       cls += "bg-red-800 border-red-600 text-white";
                     } else {
                       cls +=
@@ -250,6 +261,15 @@ export default function AdminPage() {
                   );
                 })}
               </div>
+
+              {activeQuestion.trapAnswer && (
+                <button
+                  onClick={revealTrapAnswer}
+                  className="w-full py-2 rounded-lg text-sm font-bold border border-amber-500 text-amber-400 bg-amber-900/20 hover:bg-amber-900/40 transition-colors"
+                >
+                  ⚠️ Reveal Option E
+                </button>
+              )}
 
               <div className="flex gap-2">
                 {!revealAnswer && playerAnswer !== null && (
@@ -299,6 +319,16 @@ export default function AdminPage() {
                     </button>
                   );
                 })}
+                <button
+                  onClick={timerActive ? stopTimer : startTimer}
+                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors border ${
+                    timerActive
+                      ? "border-red-600 text-red-400 bg-[#1A1A1A] hover:bg-red-900/20"
+                      : "border-[#555] text-[#aaa] bg-[#1A1A1A] hover:bg-[#333]"
+                  }`}
+                >
+                  {timerActive ? "⏹ Stop Timer" : "▶ Start Timer"}
+                </button>
               </div>
             </div>
           )}

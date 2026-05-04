@@ -4,15 +4,37 @@ import { ALL_PLAYERS, PLAYERS, PlayerQuestion } from "@/data/mockData";
 export const SPIN_DURATION = 4000;
 
 const WHEEL_NAMES = [
-  'Lars Svensson', 'Emma Nilsson', 'Johan Eriksson', 'Maria Larsson',
-  'Anders Karlsson', 'Sofia Andersson', 'Mikael Lindström', 'Klara Persson',
-  'Oskar Gustafsson', 'Maja Olsson', 'Filip Johansson', 'Hanna Pettersson',
-  'Gustav Magnusson', 'Lina Björk', 'Erik Holm', 'Sara Lindgren',
-  'Tobias Berg', 'Astrid Nyström', 'Viktor Strand', 'Ida Forsgren',
+  "Lars Svensson",
+  "Emma Nilsson",
+  "Johan Eriksson",
+  "Maria Larsson",
+  "Anders Karlsson",
+  "Sofia Andersson",
+  "Mikael Lindström",
+  "Klara Persson",
+  "Oskar Gustafsson",
+  "Maja Olsson",
+  "Filip Johansson",
+  "Hanna Pettersson",
+  "Gustav Magnusson",
+  "Lina Björk",
+  "Erik Holm",
+  "Sara Lindgren",
+  "Tobias Berg",
+  "Astrid Nyström",
+  "Viktor Strand",
+  "Ida Forsgren",
 ];
 
 export interface GameData {
-  phase: "idle" | "spinning" | "selected" | "quiz" | "intermission" | "done" | "winner";
+  phase:
+    | "idle"
+    | "spinning"
+    | "selected"
+    | "quiz"
+    | "intermission"
+    | "done"
+    | "winner";
   wheelSpinning: boolean;
   wheelTargetRotation: number;
   spinRound: number;
@@ -26,6 +48,9 @@ export interface GameData {
   aiReveal: boolean;
   aiWrongAnswer: number | null;
   hiddenAnswers: number[];
+  showTrapAnswer: boolean;
+  timerActive: boolean;
+  timerSeconds: number;
   usedLifelines: string[];
   winnerName: string | null;
   forcedWinner: string | null;
@@ -38,6 +63,11 @@ interface GameActions {
   showScreen: () => void;
   setForcedWinner: (n: string | null) => void;
   setActiveQuestion: (q: PlayerQuestion) => void;
+  revealTrapAnswer: () => void;
+  startTimer: () => void;
+  stopTimer: () => void;
+  resetTimer: () => void;
+  tickTimer: () => void;
   selectPlayerAnswer: (i: number) => void;
   revealCurrentAnswer: () => void;
   markCorrect: () => void;
@@ -68,6 +98,9 @@ const initialData: GameData = {
   aiReveal: false,
   aiWrongAnswer: null,
   hiddenAnswers: [],
+  showTrapAnswer: false,
+  timerActive: false,
+  timerSeconds: 30,
   usedLifelines: [],
   winnerName: null,
   forcedWinner: null,
@@ -109,41 +142,93 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setForcedWinner: (n) => set({ forcedWinner: n }),
 
-  setActiveQuestion: (q: PlayerQuestion) => set((state) => ({
-    ...state,
-    activeQuestion: q,
-    currentContestant: q.playerName,
-    playerAnswer: null,
-    revealAnswer: false,
-    aiThinking: false,
-    aiReveal: false,
-    aiWrongAnswer: null,
-    hiddenAnswers: [],
-    phase: 'quiz'
-  })),
+  setActiveQuestion: (q: PlayerQuestion) =>
+    set((state) => ({
+      ...state,
+      activeQuestion: q,
+      currentContestant: q.playerName,
+      playerAnswer: null,
+      revealAnswer: false,
+      aiThinking: false,
+      aiReveal: false,
+      aiWrongAnswer: null,
+      hiddenAnswers: [],
+      showTrapAnswer: false,
+      timerActive: true,
+      timerSeconds: 30,
+      phase: "quiz",
+    })),
 
-  selectPlayerAnswer: (i) => set({ playerAnswer: i, aiThinking: false, aiReveal: false, aiWrongAnswer: null }),
+  revealTrapAnswer: () => set({ showTrapAnswer: true }),
+
+  startTimer: () => set({ timerActive: true, timerSeconds: 20 }),
+  stopTimer: () => set({ timerActive: false }),
+  resetTimer: () => set({ timerActive: false, timerSeconds: 20 }),
+  tickTimer: () => {
+    const { timerSeconds } = get();
+    const next = Math.max(0, timerSeconds - 1);
+    set({ timerSeconds: next, ...(next === 0 ? { timerActive: false } : {}) });
+  },
+
+  selectPlayerAnswer: (i) =>
+    set({
+      playerAnswer: i,
+      timerActive: false,
+      aiThinking: false,
+      aiReveal: false,
+      aiWrongAnswer: null,
+    }),
 
   revealCurrentAnswer: () => set({ revealAnswer: true }),
 
   markCorrect: () => {
     const { activeQuestion, currentContestant } = get();
     if (activeQuestion?.round === 3) {
-      set({ phase: "winner", winnerName: currentContestant, activeQuestion: null, playerAnswer: null, revealAnswer: false, hiddenAnswers: [], aiThinking: false, aiReveal: false, aiWrongAnswer: null });
+      set({
+        phase: "winner",
+        winnerName: currentContestant,
+        activeQuestion: null,
+        playerAnswer: null,
+        revealAnswer: false,
+        hiddenAnswers: [],
+        showTrapAnswer: false,
+        timerActive: false,
+        timerSeconds: 30,
+        aiThinking: false,
+        aiReveal: false,
+        aiWrongAnswer: null,
+      });
     } else {
-      set({ phase: "intermission", activeQuestion: null, playerAnswer: null, revealAnswer: false, hiddenAnswers: [], aiThinking: false, aiReveal: false, aiWrongAnswer: null });
+      set({
+        phase: "intermission",
+        activeQuestion: null,
+        playerAnswer: null,
+        revealAnswer: false,
+        hiddenAnswers: [],
+        showTrapAnswer: false,
+        timerActive: false,
+        timerSeconds: 30,
+        aiThinking: false,
+        aiReveal: false,
+        aiWrongAnswer: null,
+      });
     }
   },
 
   markWrong: () => {
     const { currentContestant, eliminated } = get();
     set({
-      eliminated: currentContestant ? [...eliminated, currentContestant] : eliminated,
+      eliminated: currentContestant
+        ? [...eliminated, currentContestant]
+        : eliminated,
       activeQuestion: null,
       playerAnswer: null,
       revealAnswer: false,
       phase: "done",
       hiddenAnswers: [],
+      showTrapAnswer: false,
+      timerActive: false,
+      timerSeconds: 30,
       usedLifelines: [],
       aiThinking: false,
       aiReveal: false,
@@ -160,6 +245,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       playerAnswer: null,
       revealAnswer: false,
       hiddenAnswers: [],
+      showTrapAnswer: false,
+      timerActive: false,
+      timerSeconds: 30,
       usedLifelines: [],
       aiThinking: false,
       aiReveal: false,
@@ -174,29 +262,36 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   useLifelineAI: () => {
     const state = get();
-    if (state.usedLifelines.includes('ai')) return;
+    if (state.usedLifelines.includes("ai")) return;
     const correct = state.activeQuestion?.correct ?? 0;
-    const wrongOptions = [0, 1, 2, 3].filter(i => i !== correct);
-    const aiWrongAnswer = wrongOptions[Math.floor(Math.random() * wrongOptions.length)];
-    set({ aiThinking: true, aiReveal: false, aiWrongAnswer, usedLifelines: [...state.usedLifelines, 'ai'] });
+    const wrongOptions = [0, 1, 2, 3].filter((i) => i !== correct);
+    const aiWrongAnswer =
+      wrongOptions[Math.floor(Math.random() * wrongOptions.length)];
+    set({
+      aiThinking: true,
+      aiReveal: false,
+      aiWrongAnswer,
+      usedLifelines: [...state.usedLifelines, "ai"],
+    });
     setTimeout(() => set({ aiThinking: false, aiReveal: true }), 4000);
   },
 
-  use5050: () => set((state) => {
-    if (!state.activeQuestion) return state;
-    if (state.usedLifelines.includes('5050')) return state;
+  use5050: () =>
+    set((state) => {
+      if (!state.activeQuestion) return state;
+      if (state.usedLifelines.includes("5050")) return state;
 
-    const correct = state.activeQuestion.correct;
-    const wrongIndexes = [0, 1, 2, 3].filter(i => i !== correct);
-    const shuffled = wrongIndexes.sort(() => Math.random() - 0.5);
-    const toHide = [shuffled[0], shuffled[1]];
+      const correct = state.activeQuestion.correct;
+      const wrongIndexes = [0, 1, 2, 3].filter((i) => i !== correct);
+      const shuffled = wrongIndexes.sort(() => Math.random() - 0.5);
+      const toHide = [shuffled[0], shuffled[1]];
 
-    return {
-      ...state,
-      usedLifelines: [...state.usedLifelines, '5050'],
-      hiddenAnswers: toHide,
-    };
-  }),
+      return {
+        ...state,
+        usedLifelines: [...state.usedLifelines, "5050"],
+        hiddenAnswers: toHide,
+      };
+    }),
 
   syncState: (data) => set(data),
 }));
