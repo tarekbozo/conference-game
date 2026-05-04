@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useGameStore } from "@/store/gameStore";
+import { useGameStore, SPIN_DURATION } from "@/store/gameStore";
 import { useBroadcastSync } from "@/hooks/useBroadcastSync";
-import {
-  QUESTIONS,
-  PRIZE_LADDER,
-  SAFE_LEVELS,
-  Question,
-} from "@/data/mockData";
-import { SPIN_DURATION } from "@/store/gameStore";
-import SpinningWheel from "@/components/SpinningWheel";
+import { ALL_PLAYERS, PlayerQuestion } from "@/data/mockData";
+import SlotDrum from "@/components/SlotDrum";
+
+const ROUND_LABELS: Record<number, string> = {
+  0: "Easy",
+  1: "Medium",
+  2: "Hard",
+};
 
 const LABELS = ["A", "B", "C", "D"];
 
@@ -80,6 +80,83 @@ function WaitingScreen() {
         >
           Waiting for host…
         </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Intermission ───────────────────────────────────────────────────────────────
+
+function IntermissionScreen() {
+  return (
+    <div className="flex flex-col items-center min-h-screen bg-black">
+      {/* Accenture logo */}
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 0,
+          paddingTop: "4vh",
+        }}
+      >
+        <span
+          style={{
+            color: "#A100FF",
+            fontWeight: 700,
+            fontSize: "1.8vw",
+            lineHeight: 1,
+            marginBottom: "-18px",
+            marginLeft: "118px",
+          }}
+        >
+          &gt;
+        </span>
+        <span
+          style={{
+            color: "white",
+            fontWeight: 700,
+            fontSize: "2.5vw",
+            letterSpacing: "0.02em",
+            fontFamily: "sans-serif",
+            lineHeight: 1,
+          }}
+        >
+          accenture
+        </span>
+      </div>
+
+      {/* Centered content */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-[3vh]">
+        <p
+          className="font-black text-white uppercase tracking-[0.12em] leading-none"
+          style={{ fontSize: "6vw" }}
+        >
+          GET READY...
+        </p>
+        <p
+          className="text-[#666666] tracking-widest"
+          style={{ fontSize: "1.6vw" }}
+        >
+          Next question coming up
+        </p>
+        <div className="flex gap-4 mt-[2vh]">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="inline-block w-4 h-4 rounded-full bg-[#A100FF]"
+              style={{
+                animation: `pulse 1.4s ease-in-out ${i * 0.22}s infinite`,
+              }}
+            />
+          ))}
+        </div>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 0.2; transform: scale(0.8); }
+            50%       { opacity: 1;   transform: scale(1.2); }
+          }
+        `}</style>
       </div>
     </div>
   );
@@ -210,11 +287,11 @@ function SlotMachine({
 
   return (
     <div
-      style={{ height: windowH }}
-      className="relative rounded-xl border-2 border-[#A100FF] bg-black overflow-hidden shadow-[0_0_28px_rgba(161,0,255,0.35)]"
+    // style={{ height: windowH }}
+    // className="relative rounded-xl border-2 border-[#A100FF] bg-black overflow-hidden shadow-[0_0_28px_rgba(161,0,255,0.35)]"
     >
       {/* scrolling strip */}
-      <div
+      {/* <div
         style={{
           transform: `translateY(${translateY}px)`,
           height: totalH,
@@ -244,7 +321,7 @@ function SlotMachine({
             </div>
           );
         })}
-      </div>
+      </div> */}
 
       {/* top fade */}
       <div
@@ -277,27 +354,14 @@ function SlotMachine({
 function WheelPhaseScreen() {
   const {
     phase,
-    allPlayers,
     currentContestant,
-    wheelPlayers,
-    wheelTargetRotation,
-    wheelRotation,
     spinRound,
     selectedPlayers,
     eliminated,
+    wheelPlayers,
   } = useGameStore();
 
-  const [wheelSize, setWheelSize] = useState(600);
-  useEffect(() => {
-    const calc = () =>
-      setWheelSize(Math.min(window.innerWidth, window.innerHeight) * 0.68);
-    calc();
-    window.addEventListener("resize", calc);
-    return () => window.removeEventListener("resize", calc);
-  }, []);
-
   const spinning = phase === "spinning";
-  const targetRotation = spinning ? wheelTargetRotation : wheelRotation;
 
   return (
     <div style={{ position: "fixed", inset: 0 }} className="bg-black">
@@ -328,16 +392,15 @@ function WheelPhaseScreen() {
         className="flex flex-col items-center"
       >
         <SlotMachine
-          names={allPlayers}
+          names={wheelPlayers}
           spinning={spinning}
           finalName={spinning ? null : currentContestant}
         />
-        <SpinningWheel
+        <SlotDrum
           players={wheelPlayers}
-          targetRotation={targetRotation}
           spinning={spinning}
-          spinDuration={SPIN_DURATION}
-          size={wheelSize}
+          finalName={currentContestant}
+          //spinDuration={SPIN_DURATION}
         />
         <p
           style={{ fontSize: "1.2vw" }}
@@ -427,17 +490,15 @@ function SelectedScreen({ contestant }: { contestant: string | null }) {
 
 // ── Prize ladder ───────────────────────────────────────────────────────────────
 
-function PrizeLadder({ currentLevel }: { currentLevel: number }) {
-  const reversed = [...PRIZE_LADDER].reverse();
-  const lastIndex = PRIZE_LADDER.length - 1;
+const DIFFICULTY_LEVELS = ["Easy", "Medium", "Hard"];
 
+function PrizeLadder({ currentLevel }: { currentLevel: number }) {
   return (
     <div className="flex flex-col gap-[3px] w-52 shrink-0 self-start pt-1">
-      {reversed.map((prize, ri) => {
-        const idx = lastIndex - ri;
+      {[...DIFFICULTY_LEVELS].reverse().map((label, ri) => {
+        const idx = DIFFICULTY_LEVELS.length - 1 - ri;
         const isCurrent = idx === currentLevel;
         const isAbove = idx > currentLevel;
-        const isSafe = SAFE_LEVELS.has(idx);
 
         return (
           <div
@@ -445,22 +506,15 @@ function PrizeLadder({ currentLevel }: { currentLevel: number }) {
             className={`flex items-center justify-between px-3 py-[5px] rounded-lg text-xs font-bold transition-all duration-300 ${
               isCurrent
                 ? "bg-[#A100FF] text-white shadow-[0_0_18px_rgba(161,0,255,0.6)] scale-[1.06] text-sm py-2"
-                : isSafe && !isAbove
-                  ? "bg-[#1A0030] border border-[#A100FF]/50 text-[#A100FF]"
-                  : isAbove
-                    ? "bg-transparent text-[#333333]"
-                    : "bg-[#1A1A1A] border border-[#333333] text-white"
+                : isAbove
+                  ? "bg-transparent text-[#333333]"
+                  : "bg-[#1A1A1A] border border-[#333333] text-white"
             }`}
           >
             <span className="opacity-50 w-5 text-right tabular-nums">
               {idx + 1}
             </span>
-            <span className="flex-1 text-right tabular-nums">
-              {prize.toLocaleString()}
-            </span>
-            {isSafe && !isCurrent && !isAbove && (
-              <span className="ml-1.5 text-[10px]">🔒</span>
-            )}
+            <span className="flex-1 text-right capitalize">{label}</span>
           </div>
         );
       })}
@@ -485,7 +539,9 @@ function AnswerButton({
   isHidden: boolean;
   isPlayerAnswer: boolean;
 }) {
-  if (isHidden) return <div />;
+  if (isHidden) return (
+    <div className="flex items-center gap-5 w-full px-7 py-4 rounded-full border-2 border-[#333333] bg-[#1A1A1A] opacity-20 pointer-events-none min-h-[68px]" />
+  );
 
   const base =
     "flex items-center gap-5 w-full px-7 py-4 rounded-full border-2 transition-all duration-500 min-h-[68px]";
@@ -529,12 +585,11 @@ const THINKING_STRINGS = [
 function AIColleagueOverlay({
   aiThinking,
   aiReveal,
-  question,
 }: {
   aiThinking: boolean;
   aiReveal: boolean;
-  question: Question | undefined;
 }) {
+  const { activeQuestion, aiWrongAnswer } = useGameStore();
   const [thinkingText, setThinkingText] = useState(THINKING_STRINGS[0]);
   const [dotPhase, setDotPhase] = useState(0);
 
@@ -556,9 +611,9 @@ function AIColleagueOverlay({
 
   if (!aiThinking && !aiReveal) return null;
 
-  const correctIdx = question?.correct ?? 0;
-  const correctLabel = LABELS[correctIdx];
-  const correctText = question?.answers[correctIdx] ?? "";
+  console.log(aiWrongAnswer);
+  const wrongText = activeQuestion?.answers[aiWrongAnswer ?? 0] ?? "";
+  const wrongLabel = ['A','B','C','D'][aiWrongAnswer ?? 0];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
@@ -621,10 +676,10 @@ function AIColleagueOverlay({
               }}
             >
               <span className="text-4xl font-extrabold text-[#A100FF]">
-                {correctLabel}
+                {wrongLabel}
               </span>
               <span className="text-3xl font-bold text-green-300 leading-snug">
-                {correctText}
+                {wrongText}
               </span>
             </div>
           </>
@@ -637,49 +692,43 @@ function AIColleagueOverlay({
 // ── Game screen (quiz phase) ───────────────────────────────────────────────────
 
 function GameScreen({
-  question,
   revealAnswer,
-  currentLevel,
   currentContestant,
-  usedLifelines,
-  hiddenAnswers,
   playerAnswer,
   aiThinking,
   aiReveal,
 }: {
-  question: Question;
   revealAnswer: boolean;
-  currentLevel: number;
   currentContestant: string | null;
-  usedLifelines: string[];
-  hiddenAnswers: number[];
   playerAnswer: number | null;
   aiThinking: boolean;
   aiReveal: boolean;
 }) {
-  const lifelines = [
-    { id: "5050", label: "50:50", emoji: "✂️" },
-    { id: "skip", label: "Skip", emoji: "⏭" },
-    { id: "ai", label: "AI Colleague", emoji: "🤖" },
-  ];
-
+  const { activeQuestion, hiddenAnswers, usedLifelines } = useGameStore();
+  if (!activeQuestion) return null;
   return (
     <div className="flex flex-col min-h-screen bg-black">
       <header className="flex items-center justify-between px-10 py-5 border-b border-[#333333]">
         <div className="flex gap-3">
-          {lifelines.map(({ id, label, emoji }) => (
-            <div
-              key={id}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-full border-2 font-bold text-base tracking-wide transition-all ${
-                usedLifelines.includes(id)
-                  ? "bg-transparent border-[#333333] text-[#333333] line-through opacity-40"
-                  : "bg-[#1A1A1A] border-[#A100FF] text-[#A100FF]"
-              }`}
-            >
-              <span className="text-lg">{emoji}</span>
-              <span>{label}</span>
-            </div>
-          ))}
+          {[
+            { label: "50:50", emoji: "✂️", id: "5050" },
+            { label: "AI Colleague", emoji: "🤖", id: "ai" },
+          ].map(({ label, emoji, id }) => {
+            const used = usedLifelines.includes(id);
+            return (
+              <div
+                key={label}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-full border-2 font-bold text-base tracking-wide ${
+                  used
+                    ? "bg-[#1A1A1A] border-[#333333] text-[#555555] opacity-40 line-through"
+                    : "bg-[#1A1A1A] border-[#A100FF] text-[#A100FF]"
+                }`}
+              >
+                <span className="text-lg">{used ? "✕" : emoji}</span>
+                <span>{label}</span>
+              </div>
+            );
+          })}
         </div>
         <div className="text-right">
           <p className="text-xs text-[#666666] uppercase tracking-[0.2em]">
@@ -694,22 +743,21 @@ function GameScreen({
       <main className="flex flex-1 gap-6 px-10 py-6">
         <div className="flex-1 flex flex-col justify-center gap-10">
           <div className="text-center space-y-3 px-4">
-            <p className="text-sm text-[#A100FF] tracking-[0.25em] uppercase">
-              Question {currentLevel + 1} —{" "}
-              {PRIZE_LADDER[currentLevel]?.toLocaleString()}
+            <p className="text-sm text-[#A100FF] tracking-[0.25em] uppercase capitalize">
+              {activeQuestion?.difficulty ?? "—"}
             </p>
             <p className="text-4xl font-bold text-white leading-snug tracking-wide">
-              {question.text}
+              {activeQuestion?.question}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4 max-w-3xl mx-auto w-full">
-            {question.answers.map((answer, idx) => (
+            {activeQuestion?.answers.map((answer, idx) => (
               <AnswerButton
                 key={idx}
                 label={LABELS[idx]}
                 text={answer}
-                isCorrect={idx === question.correct}
+                isCorrect={idx === activeQuestion.correct}
                 isRevealed={revealAnswer}
                 isHidden={hiddenAnswers.includes(idx)}
                 isPlayerAnswer={idx === playerAnswer}
@@ -718,53 +766,109 @@ function GameScreen({
           </div>
         </div>
 
-        <PrizeLadder currentLevel={currentLevel} />
+        <PrizeLadder currentLevel={activeQuestion ? activeQuestion.round - 1 : 0} />
       </main>
 
       <AIColleagueOverlay
         aiThinking={aiThinking}
         aiReveal={aiReveal}
-        question={question}
       />
+    </div>
+  );
+}
+
+// ── Winner screen ──────────────────────────────────────────────────────────────
+
+function WinnerScreen({ name }: { name: string | null }) {
+  return (
+    <div className="flex flex-col items-center min-h-screen bg-black overflow-hidden relative">
+      <style>{`
+        @keyframes confettiFall {
+          0%   { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+        @keyframes winnerName {
+          0%   { opacity: 0; transform: scale(0.5); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        .confetti-piece {
+          position: absolute;
+          top: 0;
+          width: 12px;
+          height: 18px;
+          border-radius: 3px;
+          animation: confettiFall linear infinite;
+        }
+        .winner-name {
+          animation: winnerName 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+      `}</style>
+
+      {/* Confetti */}
+      {[
+        { left: "5%",  delay: "0s",    dur: "3.2s", color: "#A100FF" },
+        { left: "10%", delay: "0.4s",  dur: "2.8s", color: "#FFD700" },
+        { left: "16%", delay: "0.1s",  dur: "3.5s", color: "#00E5FF" },
+        { left: "22%", delay: "0.7s",  dur: "2.6s", color: "#FF4081" },
+        { left: "28%", delay: "0.3s",  dur: "3.1s", color: "#A100FF" },
+        { left: "34%", delay: "0.9s",  dur: "2.9s", color: "#69FF47" },
+        { left: "40%", delay: "0.2s",  dur: "3.4s", color: "#FFD700" },
+        { left: "46%", delay: "0.6s",  dur: "2.7s", color: "#FF4081" },
+        { left: "52%", delay: "0.0s",  dur: "3.0s", color: "#A100FF" },
+        { left: "58%", delay: "0.5s",  dur: "3.3s", color: "#00E5FF" },
+        { left: "64%", delay: "0.8s",  dur: "2.5s", color: "#69FF47" },
+        { left: "70%", delay: "0.15s", dur: "3.6s", color: "#FFD700" },
+        { left: "76%", delay: "0.45s", dur: "2.8s", color: "#FF4081" },
+        { left: "82%", delay: "0.65s", dur: "3.2s", color: "#A100FF" },
+        { left: "88%", delay: "0.25s", dur: "2.9s", color: "#00E5FF" },
+        { left: "93%", delay: "0.75s", dur: "3.1s", color: "#69FF47" },
+        { left: "12%", delay: "1.1s",  dur: "2.7s", color: "#FFD700" },
+        { left: "37%", delay: "1.3s",  dur: "3.4s", color: "#FF4081" },
+        { left: "61%", delay: "1.0s",  dur: "2.6s", color: "#A100FF" },
+        { left: "85%", delay: "1.2s",  dur: "3.0s", color: "#69FF47" },
+      ].map((p, i) => (
+        <div
+          key={i}
+          className="confetti-piece"
+          style={{
+            left: p.left,
+            backgroundColor: p.color,
+            animationDelay: p.delay,
+            animationDuration: p.dur,
+          }}
+        />
+      ))}
+
+      {/* Accenture logo */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0, paddingTop: "4vh" }}>
+        <span style={{ color: "#A100FF", fontWeight: 700, fontSize: "1.8vw", lineHeight: 1, marginBottom: "-18px", marginLeft: "118px" }}>
+          &gt;
+        </span>
+        <span style={{ color: "white", fontWeight: 700, fontSize: "2.5vw", letterSpacing: "0.02em", fontFamily: "sans-serif", lineHeight: 1 }}>
+          accenture
+        </span>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-[3vh]">
+        <div style={{ fontSize: "12vw", lineHeight: 1 }}>🏆</div>
+        <p className="font-black text-white uppercase tracking-[0.12em]" style={{ fontSize: "6vw" }}>
+          WINNER!
+        </p>
+        <p
+          className="winner-name font-black uppercase tracking-[0.06em]"
+          style={{ fontSize: "8vw", color: "#A100FF" }}
+        >
+          {name}
+        </p>
+      </div>
     </div>
   );
 }
 
 // ── Done screen ────────────────────────────────────────────────────────────────
 
-function DoneScreen({
-  winner,
-  eliminated,
-  currentLevel,
-}: {
-  winner: string | null;
-  eliminated: string | null;
-  currentLevel: number;
-}) {
-  if (winner !== null) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-black">
-        <div className="text-center space-y-6">
-          <div className="text-9xl animate-bounce">🏆</div>
-          <p className="text-5xl font-extrabold text-[#A100FF] tracking-widest uppercase">
-            We Have a Winner!
-          </p>
-          <p className="text-7xl font-extrabold text-white tracking-wide">
-            {winner}
-          </p>
-          <div className="mt-6 px-16 py-8 bg-[#A100FF] rounded-3xl shadow-[0_0_70px_rgba(161,0,255,0.6)]">
-            <p className="text-2xl font-bold text-white uppercase tracking-widest">
-              Wins
-            </p>
-            <p className="text-8xl font-extrabold text-white leading-none">
-              {PRIZE_LADDER[currentLevel]?.toLocaleString()}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+function DoneScreen({ eliminated }: { eliminated: string | null }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-black">
       <div className="text-center space-y-6 px-12">
@@ -788,21 +892,14 @@ export default function ScreenPage() {
   const {
     phase,
     screenVisible,
-    selectedPlayers,
-    eliminated,
     currentContestant,
-    currentQuestionIndex,
+    winnerName,
+    activeQuestion,
     revealAnswer,
-    currentLevel,
-    usedLifelines,
-    hiddenAnswers,
-    winner,
     playerAnswer,
     aiThinking,
     aiReveal,
   } = useGameStore();
-
-  const question = QUESTIONS[currentQuestionIndex];
 
   if (!screenVisible) return <WaitingScreen />;
 
@@ -817,12 +914,8 @@ export default function ScreenPage() {
   if (phase === "quiz") {
     return (
       <GameScreen
-        question={question}
         revealAnswer={revealAnswer}
-        currentLevel={currentLevel}
         currentContestant={currentContestant}
-        usedLifelines={usedLifelines}
-        hiddenAnswers={hiddenAnswers}
         playerAnswer={playerAnswer}
         aiThinking={aiThinking}
         aiReveal={aiReveal}
@@ -830,14 +923,16 @@ export default function ScreenPage() {
     );
   }
 
+  if (phase === "intermission") {
+    return <IntermissionScreen />;
+  }
+
+  if (phase === "winner") {
+    return <WinnerScreen name={winnerName} />;
+  }
+
   if (phase === "done") {
-    return (
-      <DoneScreen
-        winner={winner}
-        eliminated={currentContestant}
-        currentLevel={currentLevel}
-      />
-    );
+    return <DoneScreen eliminated={currentContestant} />;
   }
 
   return <WaitingScreen />;
