@@ -14,28 +14,26 @@ export function useBroadcastSync(role: "admin" | "screen") {
 
     if (role === "admin") {
       const unsubscribe = useGameStore.subscribe((state) => {
-        // Only serialise the data fields — functions cannot travel over BroadcastChannel
         const payload: GameData = {
           phase: state.phase,
-          allPlayers: state.allPlayers,
-          selectedPlayers: state.selectedPlayers,
-          eliminated: state.eliminated,
-          currentContestant: state.currentContestant,
-          wheelPlayers: state.wheelPlayers,
-          wheelRotation: state.wheelRotation,
+          wheelSpinning: state.wheelSpinning,
           wheelTargetRotation: state.wheelTargetRotation,
           spinRound: state.spinRound,
-          currentQuestionIndex: state.currentQuestionIndex,
-          revealAnswer: state.revealAnswer,
-          currentLevel: state.currentLevel,
-          usedLifelines: state.usedLifelines,
-          hiddenAnswers: state.hiddenAnswers,
-          gameOver: state.gameOver,
-          winner: state.winner,
-          screenVisible: state.screenVisible,
+          selectedPlayers: state.selectedPlayers,
+          currentContestant: state.currentContestant,
+          eliminated: state.eliminated,
+          activeQuestion: state.activeQuestion,
           playerAnswer: state.playerAnswer,
+          revealAnswer: state.revealAnswer,
           aiThinking: state.aiThinking,
           aiReveal: state.aiReveal,
+          aiWrongAnswer: state.aiWrongAnswer,
+          hiddenAnswers: state.hiddenAnswers,
+          usedLifelines: state.usedLifelines,
+          winnerName: state.winnerName,
+          forcedWinner: null,
+          screenVisible: state.screenVisible,
+          wheelPlayers: state.wheelPlayers,
         };
         channel.postMessage({ type: "SYNC", state: payload });
       });
@@ -45,7 +43,6 @@ export function useBroadcastSync(role: "admin" | "screen") {
         channel.close();
       };
     } else {
-      // Screen: receive and apply state
       channel.onmessage = (event: MessageEvent) => {
         if (event.data?.type === "SYNC") {
           useGameStore.getState().syncState(event.data.state as GameData);
