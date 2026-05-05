@@ -1,6 +1,15 @@
 import { create } from "zustand";
 import { ALL_PLAYERS, PLAYERS, PlayerQuestion } from "@/data/mockData";
 
+export type Phase =
+  | "idle"
+  | "spinning"
+  | "selected"
+  | "quiz"
+  | "intermission"
+  | "done"
+  | "winner";
+
 export const SPIN_DURATION = 4000;
 
 const WHEEL_NAMES = [
@@ -27,14 +36,7 @@ const WHEEL_NAMES = [
 ];
 
 export interface GameData {
-  phase:
-    | "idle"
-    | "spinning"
-    | "selected"
-    | "quiz"
-    | "intermission"
-    | "done"
-    | "winner";
+  phase: Phase;
   wheelSpinning: boolean;
   wheelTargetRotation: number;
   spinRound: number;

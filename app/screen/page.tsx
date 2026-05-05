@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useGameStore, SPIN_DURATION } from "@/store/gameStore";
 import { useBroadcastSync } from "@/hooks/useBroadcastSync";
+import { useScreenAudio } from "@/hooks/useScreenAudio";
 import { ALL_PLAYERS, PlayerQuestion } from "@/data/mockData";
 import SlotDrum from "@/components/SlotDrum";
 
@@ -16,7 +17,13 @@ const LABELS = ["A", "B", "C", "D"];
 
 // ── Waiting / idle ─────────────────────────────────────────────────────────────
 
-function WaitingScreen() {
+function WaitingScreen({
+  audioEnabled,
+  onEnableAudio,
+}: {
+  audioEnabled: boolean;
+  onEnableAudio: () => void;
+}) {
   return (
     <div className="flex flex-col items-center min-h-screen bg-black">
       {/* Accenture logo */}
@@ -81,6 +88,16 @@ function WaitingScreen() {
           Waiting for host…
         </p>
       </div>
+
+      {!audioEnabled && (
+        <button
+          type="button"
+          onClick={onEnableAudio}
+          className="fixed bottom-4 right-4 z-50 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/30 opacity-25 hover:opacity-100"
+        >
+          Click to enable audio
+        </button>
+      )}
     </div>
   );
 }
@@ -1239,6 +1256,8 @@ function DoneScreen({ eliminated }: { eliminated: string | null }) {
 export default function ScreenPage() {
   useBroadcastSync("screen");
 
+  const [audioEnabled, setAudioEnabled] = useState(false);
+
   const {
     phase,
     screenVisible,
@@ -1249,9 +1268,27 @@ export default function ScreenPage() {
     playerAnswer,
     aiThinking,
     aiReveal,
+    usedLifelines,
   } = useGameStore();
 
-  if (!screenVisible) return <WaitingScreen />;
+  useScreenAudio({
+    phase,
+    screenVisible,
+    revealAnswer,
+    playerAnswer,
+    currentQuestionCorrect: activeQuestion?.correct ?? 0,
+    currentLevel: activeQuestion?.round ?? 1,
+    usedLifelines,
+    audioEnabled,
+  });
+
+  if (!screenVisible)
+    return (
+      <WaitingScreen
+        audioEnabled={audioEnabled}
+        onEnableAudio={() => setAudioEnabled(true)}
+      />
+    );
 
   if (phase === "idle" || phase === "spinning") {
     return <WheelPhaseScreen />;
@@ -1285,5 +1322,10 @@ export default function ScreenPage() {
     return <DoneScreen eliminated={currentContestant} />;
   }
 
-  return <WaitingScreen />;
+  return (
+    <WaitingScreen
+      audioEnabled={audioEnabled}
+      onEnableAudio={() => setAudioEnabled(true)}
+    />
+  );
 }
