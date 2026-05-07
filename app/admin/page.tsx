@@ -254,9 +254,15 @@ export default function AdminPage() {
                   let cls =
                     "rounded-lg p-2 text-xs font-bold border transition-all text-center ";
                   if (revealAnswer) {
-                    if (!activeQuestion.trapAnswer && idx === activeQuestion.correct) {
+                    if (
+                      !activeQuestion.trapAnswer &&
+                      idx === activeQuestion.correct
+                    ) {
                       cls += "bg-green-700 border-green-500 text-white";
-                    } else if (!activeQuestion.trapAnswer && idx === playerAnswer) {
+                    } else if (
+                      !activeQuestion.trapAnswer &&
+                      idx === playerAnswer
+                    ) {
                       cls += "bg-red-800 border-red-600 text-white";
                     } else {
                       cls +=
@@ -293,11 +299,11 @@ export default function AdminPage() {
                 </button>
               )}
 
-              <div className="flex gap-2">
+              <div className="flex gap-6">
                 {!revealAnswer && playerAnswer !== null && (
                   <button
                     onClick={revealCurrentAnswer}
-                    className="flex-1 py-2 bg-[#A100FF] hover:bg-[#8800dd] rounded-lg text-sm font-bold transition-colors"
+                    className="flex-1 py-4 mt-4 mb-4 max-w-screen-md m-auto bg-[#A100FF] hover:bg-[#8800dd] rounded-lg text-sm font-bold transition-colors"
                   >
                     🔍 Reveal Answer
                   </button>
@@ -368,7 +374,13 @@ export default function AdminPage() {
               return (
                 <div
                   key={player.id}
-                  className={isEliminated ? "opacity-40" : ""}
+                  className={
+                    isEliminated
+                      ? "opacity-30"
+                      : eliminated.length > 0
+                        ? "ring-1 ring-[#A100FF]/60 rounded-xl p-2 bg-[#A100FF]/5"
+                        : ""
+                  }
                 >
                   <div className="mb-2">
                     <p className="text-sm font-bold text-white leading-tight">

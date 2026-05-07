@@ -645,7 +645,7 @@ function PrizeLadder({ currentLevel }: { currentLevel: number }) {
 
             {/* CONTENT */}
             <div
-              className={`relative z-10 flex items-center justify-between px-4 h-full text-xs font-bold ${textColor}`}
+              className={`relative z-10 flex items-center justify-between px-4 h-full text-md font-bold ${textColor}`}
             >
               <span className="opacity-60 w-6 pl-1  tabular-nums">
                 {idx + 1}
