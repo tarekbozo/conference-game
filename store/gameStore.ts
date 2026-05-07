@@ -5,6 +5,7 @@ export type Phase =
   | "idle"
   | "spinning"
   | "selected"
+  | "reveal"
   | "quiz"
   | "intermission"
   | "done"
@@ -34,6 +35,10 @@ const WHEEL_NAMES = [
   "Viktor Strand",
   "Ida Forsgren",
 ];
+
+function getShuffledWheelNames(): string[] {
+  return [...WHEEL_NAMES].sort(() => Math.random() - 0.5);
+}
 
 export interface GameData {
   phase: Phase;
@@ -80,6 +85,7 @@ interface GameActions {
   resetGame: () => void;
   useLifelineAI: () => void;
   use5050: () => void;
+  skipReveal: () => void;
   syncState: (data: GameData) => void;
 }
 
@@ -125,7 +131,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ? state.forcedWinner
         : remaining[Math.floor(Math.random() * remaining.length)];
 
-    set({ wheelSpinning: true, phase: "spinning" });
+    set({
+      wheelSpinning: true,
+      phase: "spinning",
+      wheelPlayers: getShuffledWheelNames(),
+    });
 
     setTimeout(() => {
       const curr = get();
@@ -135,8 +145,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
         selectedPlayers: [...curr.selectedPlayers, winner],
         spinRound: curr.spinRound + 1,
         forcedWinner: null,
-        phase: "selected",
+        phase: "reveal",
       });
+      setTimeout(() => {
+        set({ phase: "idle" });
+      }, 3000);
     }, SPIN_DURATION);
   },
 
@@ -199,6 +212,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         aiThinking: false,
         aiReveal: false,
         aiWrongAnswer: null,
+        usedLifelines: [],
       });
     } else {
       set({
@@ -213,6 +227,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         aiThinking: false,
         aiReveal: false,
         aiWrongAnswer: null,
+        usedLifelines: [],
       });
     }
   },
@@ -294,6 +309,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         hiddenAnswers: toHide,
       };
     }),
+
+  skipReveal: () => set({ phase: "idle" }),
 
   syncState: (data) => set(data),
 }));

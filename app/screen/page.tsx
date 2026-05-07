@@ -485,6 +485,36 @@ function WheelPhaseScreen() {
   );
 }
 
+// ── Name reveal screen ─────────────────────────────────────────────────────────
+
+function NameRevealScreen({ name }: { name: string | null }) {
+  return (
+    <div className="fixed inset-0 bg-black flex flex-col items-center justify-center">
+      <style>{`
+        @keyframes fadeInName {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        .reveal-name {
+          animation: fadeInName 0.5s ease-out forwards;
+        }
+      `}</style>
+      <p
+        className="uppercase tracking-widest font-semibold mb-6"
+        style={{ color: "#A100FF", fontSize: "1.4vw" }}
+      >
+        NEXT CONTESTANT
+      </p>
+      <p
+        className="reveal-name font-black text-white leading-none text-center break-words px-8"
+        style={{ fontSize: "8vw" }}
+      >
+        {name}
+      </p>
+    </div>
+  );
+}
+
 // ── Selected screen ────────────────────────────────────────────────────────────
 
 function SelectedScreen({ contestant }: { contestant: string | null }) {
@@ -861,7 +891,8 @@ function CircularTimer({ seconds }: { seconds: number }) {
   const cy = 40;
   const r = 32;
   const dotColors = ["#ef4444", "#f97316", "#22c55e"];
-  const textColor = seconds > 19 ? "#f59e0b" : seconds > 9 ? "#f97316" : "#ef4444";
+  const textColor =
+    seconds > 19 ? "#f59e0b" : seconds > 9 ? "#f97316" : "#ef4444";
 
   const dots = Array.from({ length: dotCount }, (_, i) => {
     const angle = (i / dotCount) * 2 * Math.PI - Math.PI / 2;
@@ -882,7 +913,14 @@ function CircularTimer({ seconds }: { seconds: number }) {
       )}
       <svg width="80" height="80" viewBox="0 0 80 80">
         {dots.map(({ x, y, active, color }, i) => (
-          <circle key={i} cx={x} cy={y} r={3} fill={color} opacity={active ? 1 : 0.15} />
+          <circle
+            key={i}
+            cx={x}
+            cy={y}
+            r={3}
+            fill={color}
+            opacity={active ? 1 : 0.15}
+          />
         ))}
         <text
           x={cx}
@@ -892,7 +930,11 @@ function CircularTimer({ seconds }: { seconds: number }) {
           fill={textColor}
           fontSize="22"
           fontWeight="900"
-          style={seconds === 0 ? { animation: "timerFlash 0.5s ease-in-out infinite" } : undefined}
+          style={
+            seconds === 0
+              ? { animation: "timerFlash 0.5s ease-in-out infinite" }
+              : undefined
+          }
         >
           {seconds}
         </text>
@@ -916,8 +958,13 @@ function GameScreen({
   aiThinking: boolean;
   aiReveal: boolean;
 }) {
-  const { activeQuestion, hiddenAnswers, usedLifelines, showTrapAnswer, timerSeconds } =
-    useGameStore();
+  const {
+    activeQuestion,
+    hiddenAnswers,
+    usedLifelines,
+    showTrapAnswer,
+    timerSeconds,
+  } = useGameStore();
   console.log(showTrapAnswer);
   if (!activeQuestion) return null;
   return (
@@ -1282,24 +1329,30 @@ export default function ScreenPage() {
     audioEnabled,
   });
 
-  if (!screenVisible)
-    return (
+  const transitionKey = !screenVisible
+    ? "waiting"
+    : phase === "reveal"
+      ? `reveal-${currentContestant}`
+      : phase === "idle" || phase === "spinning"
+        ? "wheel"
+        : phase;
+
+  let screen: React.ReactNode;
+  if (!screenVisible) {
+    screen = (
       <WaitingScreen
         audioEnabled={audioEnabled}
         onEnableAudio={() => setAudioEnabled(true)}
       />
     );
-
-  if (phase === "idle" || phase === "spinning") {
-    return <WheelPhaseScreen />;
-  }
-
-  if (phase === "selected") {
-    return <SelectedScreen contestant={currentContestant} />;
-  }
-
-  if (phase === "quiz") {
-    return (
+  } else if (phase === "idle" || phase === "spinning") {
+    screen = <WheelPhaseScreen />;
+  } else if (phase === "reveal") {
+    screen = <NameRevealScreen name={currentContestant} />;
+  } else if (phase === "selected") {
+    screen = <SelectedScreen contestant={currentContestant} />;
+  } else if (phase === "quiz") {
+    screen = (
       <GameScreen
         revealAnswer={revealAnswer}
         currentContestant={currentContestant}
@@ -1308,24 +1361,39 @@ export default function ScreenPage() {
         aiReveal={aiReveal}
       />
     );
-  }
-
-  if (phase === "intermission") {
-    return <IntermissionScreen />;
-  }
-
-  if (phase === "winner") {
-    return <WinnerScreen name={winnerName} />;
-  }
-
-  if (phase === "done") {
-    return <DoneScreen eliminated={currentContestant} />;
+  } else if (phase === "intermission") {
+    screen = <IntermissionScreen />;
+  } else if (phase === "winner") {
+    screen = <WinnerScreen name={winnerName} />;
+  } else if (phase === "done") {
+    screen = <DoneScreen eliminated={currentContestant} />;
+  } else {
+    screen = (
+      <WaitingScreen
+        audioEnabled={audioEnabled}
+        onEnableAudio={() => setAudioEnabled(true)}
+      />
+    );
   }
 
   return (
-    <WaitingScreen
-      audioEnabled={audioEnabled}
-      onEnableAudio={() => setAudioEnabled(true)}
-    />
+    <>
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        .screen-transition {
+          animation: fadeIn 0.6s ease-out forwards;
+        }
+      `}</style>
+      <div
+        key={transitionKey}
+        className="screen-transition"
+        style={{ position: "fixed", inset: 0, width: "100vw", height: "100vh" }}
+      >
+        {screen}
+      </div>
+    </>
   );
 }

@@ -17,6 +17,7 @@ const PHASE_BADGE: Record<string, string> = {
   idle: "bg-[#1A1A1A] text-[#A100FF]",
   spinning: "bg-[#A100FF]/20 text-[#A100FF]",
   selected: "bg-[#A100FF]/20 text-[#A100FF]",
+  reveal: "bg-[#A100FF]/30 text-white",
   quiz: "bg-green-800 text-green-200",
   done: "bg-[#333] text-white",
 };
@@ -59,6 +60,7 @@ export default function AdminPage() {
     startTimer,
     stopTimer,
     tickTimer,
+    skipReveal,
   } = useGameStore();
 
   useEffect(() => {
@@ -147,6 +149,26 @@ export default function AdminPage() {
                 }`}
               >
                 {wheelSpinning ? "⏳ Spinning…" : `🎡 Spin #${spinRound + 1}`}
+              </button>
+            </div>
+          )}
+
+          {phase === "reveal" && (
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-[#A100FF] font-bold animate-pulse">
+                Revealing name on screen…
+              </span>
+              <button
+                disabled
+                className="px-3 py-1.5 bg-[#333] opacity-40 cursor-not-allowed rounded-lg text-xs font-bold"
+              >
+                ⏳ Spinning…
+              </button>
+              <button
+                onClick={skipReveal}
+                className="px-4 py-3 bg-[#1A1A1A] hover:bg-[#333] border border-[#555] rounded-lg text-md font-bold transition-colors"
+              >
+                ⏭ Skip Reveal
               </button>
             </div>
           )}
