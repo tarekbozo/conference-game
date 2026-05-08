@@ -864,11 +864,12 @@ function CircularTimer({ seconds }: { seconds: number }) {
           fill={textColor}
           fontSize="22"
           fontWeight="900"
-          style={
-            seconds === 0
+          style={{
+            fontVariantNumeric: "tabular-nums",
+            ...(seconds === 0
               ? { animation: "timerFlash 0.5s ease-in-out infinite" }
-              : undefined
-          }
+              : undefined),
+          }}
         >
           {seconds}
         </text>
