@@ -27,39 +27,7 @@ function WaitingScreen({
   return (
     <div className="flex flex-col items-center min-h-screen bg-black">
       {/* Accenture logo */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 0,
-          paddingTop: "4vh",
-        }}
-      >
-        <span
-          style={{
-            color: "#A100FF",
-            fontWeight: 700,
-            fontSize: "1.8vw",
-            lineHeight: 1,
-            marginBottom: "-18px",
-            marginLeft: "118px",
-          }}
-        >
-          &gt;
-        </span>
-        <span
-          style={{
-            color: "white",
-            fontWeight: 700,
-            fontSize: "2.5vw",
-            letterSpacing: "0.02em",
-            lineHeight: 1,
-          }}
-        >
-          accenture
-        </span>
-      </div>
+      <img src="/logos/accenture.svg"></img>
 
       {/* Main content — vertically centered in remaining space */}
       <div className="flex-1 flex flex-col items-center justify-center gap-[2.5vh]">
@@ -107,40 +75,7 @@ function IntermissionScreen() {
   return (
     <div className="flex flex-col items-center min-h-screen bg-black">
       {/* Accenture logo */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 0,
-          paddingTop: "4vh",
-        }}
-      >
-        <span
-          style={{
-            color: "#A100FF",
-            fontWeight: 700,
-            fontSize: "1.8vw",
-            lineHeight: 1,
-            marginBottom: "-18px",
-            marginLeft: "118px",
-          }}
-        >
-          &gt;
-        </span>
-        <span
-          style={{
-            color: "white",
-            fontWeight: 700,
-            fontSize: "2.5vw",
-            letterSpacing: "0.02em",
-            fontFamily: "sans-serif",
-            lineHeight: 1,
-          }}
-        >
-          accenture
-        </span>
-      </div>
+      <img src="/logos/accenture.svg"></img>
 
       {/* Centered content */}
       <div className="flex-1 flex flex-col items-center justify-center gap-[3vh]">
@@ -1224,39 +1159,7 @@ function WinnerScreen({ name }: { name: string | null }) {
       ))}
 
       {/* Accenture logo */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 0,
-          paddingTop: "4vh",
-        }}
-      >
-        <span
-          style={{
-            color: "#A100FF",
-            fontWeight: 700,
-            fontSize: "1.8vw",
-            lineHeight: 1,
-            marginBottom: "-18px",
-            marginLeft: "118px",
-          }}
-        >
-          &gt;
-        </span>
-        <span
-          style={{
-            color: "white",
-            fontWeight: 700,
-            fontSize: "2.5vw",
-            letterSpacing: "0.02em",
-            lineHeight: 1,
-          }}
-        >
-          accenture
-        </span>
-      </div>
+      <img src="/logos/accenture.svg"></img>
 
       {/* Content */}
       <div className="flex-1 flex flex-col items-center justify-center gap-[3vh]">

@@ -66,6 +66,11 @@
   overflow: hidden;
 }
 
+img[src="/logos/accenture.svg"] {
+  width: 10vw;
+  margin-block-start: 2.5vh;
+}
+
 .hero-v {
   position: relative;
   bottom: 0.09em;
