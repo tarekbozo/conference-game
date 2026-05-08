@@ -27,40 +27,7 @@ function WaitingScreen({
   return (
     <div className="flex flex-col items-center min-h-screen bg-black">
       {/* Accenture logo */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 0,
-          paddingTop: "4vh",
-        }}
-      >
-        <span
-          style={{
-            color: "#A100FF",
-            fontWeight: 700,
-            fontSize: "1.8vw",
-            lineHeight: 1,
-            marginBottom: "-18px",
-            marginLeft: "118px",
-          }}
-        >
-          &gt;
-        </span>
-        <span
-          style={{
-            color: "white",
-            fontWeight: 700,
-            fontSize: "2.5vw",
-            letterSpacing: "0.02em",
-            fontFamily: "sans-serif",
-            lineHeight: 1,
-          }}
-        >
-          accenture
-        </span>
-      </div>
+      <img src="/logos/accenture.svg"></img>
 
       {/* Main content — vertically centered in remaining space */}
       <div className="flex-1 flex flex-col items-center justify-center gap-[2.5vh]">
@@ -77,7 +44,7 @@ function WaitingScreen({
           style={{ fontSize: "10vw" }}
         >
           <span style={{ color: "white" }}>REIN</span>
-          <span style={{ color: "#A100FF" }}>&gt;</span>
+          <svg className="hero-v" viewBox="0 0 107 118" xmlns="http://www.w3.org/2000/svg"><path d="M0 118L107 74.4053V43.5947L0 0V30.8107L69.1887 59L0 87.1893V118Z"></path></svg>
           <span style={{ color: "white" }}>ENTOR?</span>
         </p>
 
@@ -108,40 +75,7 @@ function IntermissionScreen() {
   return (
     <div className="flex flex-col items-center min-h-screen bg-black">
       {/* Accenture logo */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 0,
-          paddingTop: "4vh",
-        }}
-      >
-        <span
-          style={{
-            color: "#A100FF",
-            fontWeight: 700,
-            fontSize: "1.8vw",
-            lineHeight: 1,
-            marginBottom: "-18px",
-            marginLeft: "118px",
-          }}
-        >
-          &gt;
-        </span>
-        <span
-          style={{
-            color: "white",
-            fontWeight: 700,
-            fontSize: "2.5vw",
-            letterSpacing: "0.02em",
-            fontFamily: "sans-serif",
-            lineHeight: 1,
-          }}
-        >
-          accenture
-        </span>
-      </div>
+      <img src="/logos/accenture.svg"></img>
 
       {/* Centered content */}
       <div className="flex-1 flex flex-col items-center justify-center gap-[3vh]">
@@ -930,11 +864,12 @@ function CircularTimer({ seconds }: { seconds: number }) {
           fill={textColor}
           fontSize="22"
           fontWeight="900"
-          style={
-            seconds === 0
+          style={{
+            fontVariantNumeric: "tabular-nums",
+            ...(seconds === 0
               ? { animation: "timerFlash 0.5s ease-in-out infinite" }
-              : undefined
-          }
+              : undefined),
+          }}
         >
           {seconds}
         </text>
@@ -1225,40 +1160,7 @@ function WinnerScreen({ name }: { name: string | null }) {
       ))}
 
       {/* Accenture logo */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 0,
-          paddingTop: "4vh",
-        }}
-      >
-        <span
-          style={{
-            color: "#A100FF",
-            fontWeight: 700,
-            fontSize: "1.8vw",
-            lineHeight: 1,
-            marginBottom: "-18px",
-            marginLeft: "118px",
-          }}
-        >
-          &gt;
-        </span>
-        <span
-          style={{
-            color: "white",
-            fontWeight: 700,
-            fontSize: "2.5vw",
-            letterSpacing: "0.02em",
-            fontFamily: "sans-serif",
-            lineHeight: 1,
-          }}
-        >
-          accenture
-        </span>
-      </div>
+      <img src="/logos/accenture.svg"></img>
 
       {/* Content */}
       <div className="flex-1 flex flex-col items-center justify-center gap-[3vh]">
