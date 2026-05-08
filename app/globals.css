@@ -9,8 +9,7 @@
   body {
     background-color: #020218;
     color: white;
-    font-family:
-      -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: Graphik, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 }
@@ -55,11 +54,6 @@
   align-content: center;
   color: #fff;
   display: grid;
-  font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
   font-size: clamp(9px, 4cqi, 16px);
   font-weight: 800;
   letter-spacing: 0.01em;
@@ -70,4 +64,34 @@
     0 0 8px rgba(0, 0, 0, 0.4);
   white-space: nowrap;
   overflow: hidden;
+}
+
+@font-face {
+  font-display: swap;
+  font-family: Graphik;
+  font-style: normal;
+  font-weight: 400;
+  src:
+    local("Graphik-Regular-Web"),
+    url(/fonts/graphik-regular-web.woff2) format("woff2");
+}
+
+@font-face {
+  font-display: swap;
+  font-family: Graphik;
+  font-style: normal;
+  font-weight: 500;
+  src:
+    local("Graphik-Medium-Web"),
+    url(/fonts/graphik-medium-web.woff2) format("woff2");
+}
+
+@font-face {
+  font-display: swap;
+  font-family: Graphik;
+  font-style: normal;
+  font-weight: 600;
+  src:
+    local("Graphik-Semibold-Web"),
+    url(/fonts/graphik-semibold-web.woff2) format("woff2");
 }

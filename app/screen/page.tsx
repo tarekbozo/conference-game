@@ -54,7 +54,6 @@ function WaitingScreen({
             fontWeight: 700,
             fontSize: "2.5vw",
             letterSpacing: "0.02em",
-            fontFamily: "sans-serif",
             lineHeight: 1,
           }}
         >
@@ -1252,7 +1251,6 @@ function WinnerScreen({ name }: { name: string | null }) {
             fontWeight: 700,
             fontSize: "2.5vw",
             letterSpacing: "0.02em",
-            fontFamily: "sans-serif",
             lineHeight: 1,
           }}
         >
