@@ -66,6 +66,15 @@
   overflow: hidden;
 }
 
+.hero-v {
+  position: relative;
+  bottom: 0.09em;
+  fill: #a100ff;
+  height: 0.78em;
+  width: 0.78em;
+  display: inline-block;
+}
+
 @font-face {
   font-display: swap;
   font-family: Graphik;

@@ -76,7 +76,7 @@ function WaitingScreen({
           style={{ fontSize: "10vw" }}
         >
           <span style={{ color: "white" }}>REIN</span>
-          <span style={{ color: "#A100FF" }}>&gt;</span>
+          <svg className="hero-v" viewBox="0 0 107 118" xmlns="http://www.w3.org/2000/svg"><path d="M0 118L107 74.4053V43.5947L0 0V30.8107L69.1887 59L0 87.1893V118Z"></path></svg>
           <span style={{ color: "white" }}>ENTOR?</span>
         </p>
 
