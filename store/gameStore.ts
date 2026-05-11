@@ -176,9 +176,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   revealTrapAnswer: () => set({ showTrapAnswer: true }),
 
-  startTimer: () => set({ timerActive: true, timerSeconds: 20 }),
+  startTimer: () => set({ timerActive: true, timerSeconds: 30 }),
   stopTimer: () => set({ timerActive: false }),
-  resetTimer: () => set({ timerActive: false, timerSeconds: 20 }),
+  resetTimer: () => set({ timerActive: false, timerSeconds: 30 }),
   tickTimer: () => {
     const { timerSeconds } = get();
     const next = Math.max(0, timerSeconds - 1);

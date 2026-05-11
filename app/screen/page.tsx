@@ -179,193 +179,6 @@ function IntermissionScreen() {
   );
 }
 
-// ── Slot machine ──────────────────────────────────────────────────────────────
-
-const ITEM_H = 72; // px — height of one slot row
-const VISIBLE = 5; // odd number: 1 centre + 2 above + 2 below
-
-function SlotMachine({
-  names,
-  spinning,
-  finalName,
-}: {
-  names: string[];
-  spinning: boolean;
-  finalName: string | null;
-}) {
-  const [strip, setStrip] = useState<number[]>(() =>
-    Array.from({ length: VISIBLE }, (_, i) => i % names.length),
-  );
-  const [offset, setOffset] = useState(0);
-  const [bouncing, setBouncing] = useState(false);
-
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const offsetRef = useRef(0);
-
-  const nextRandom = (centre: number) => {
-    let idx: number;
-    do {
-      idx = Math.floor(Math.random() * names.length);
-    } while (names.length > 1 && idx === centre);
-    return idx;
-  };
-
-  const advance = (currentStrip: number[], randomPick?: number): number[] => {
-    const newCentre = randomPick ?? nextRandom(currentStrip[2]);
-    const next = [...currentStrip.slice(1), newCentre];
-    return next;
-  };
-
-  const EASE_WINDOW = 1200;
-  const easeSteps: Array<{ delay: number; interval: number }> = [
-    { delay: 0, interval: 150 },
-    { delay: 600, interval: 250 },
-    { delay: 900, interval: 400 },
-    { delay: 1050, interval: 600 },
-  ];
-
-  const clearAll = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    timeoutsRef.current.forEach(clearTimeout);
-    timeoutsRef.current = [];
-  };
-
-  const startInterval = (
-    ms: number,
-    currentStrip: React.MutableRefObject<number[]>,
-  ) => {
-    clearAll();
-    intervalRef.current = setInterval(() => {
-      const next = advance(currentStrip.current);
-      currentStrip.current = next;
-      setStrip([...next]);
-      offsetRef.current = 0;
-      setOffset(0);
-    }, ms);
-  };
-
-  useEffect(() => {
-    const stripRef = { current: strip };
-
-    if (spinning) {
-      setBouncing(false);
-
-      startInterval(150, stripRef);
-
-      const spinEndsIn = SPIN_DURATION;
-      easeSteps.forEach(({ delay, interval }) => {
-        const t = setTimeout(
-          () => {
-            startInterval(interval, stripRef);
-          },
-          spinEndsIn - EASE_WINDOW + delay,
-        );
-        timeoutsRef.current.push(t);
-      });
-
-      const stopT = setTimeout(() => {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-      }, spinEndsIn);
-      timeoutsRef.current.push(stopT);
-    } else {
-      clearAll();
-
-      if (finalName) {
-        const finalIdx = names.indexOf(finalName);
-        const centre = finalIdx >= 0 ? finalIdx : 0;
-        const snapped = [
-          (centre - 2 + names.length) % names.length,
-          (centre - 1 + names.length) % names.length,
-          centre,
-          (centre + 1) % names.length,
-          (centre + 2) % names.length,
-        ];
-        setStrip(snapped);
-        setOffset(0);
-        setBouncing(true);
-        timeoutsRef.current.push(setTimeout(() => setBouncing(false), 700));
-      }
-    }
-
-    return clearAll;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spinning, finalName]);
-
-  const windowH = ITEM_H;
-  const totalH = VISIBLE * ITEM_H;
-  const translateY = -((VISIBLE - 1) / 2) * ITEM_H + offset;
-
-  return (
-    <div
-    // style={{ height: windowH }}
-    // className="relative rounded-xl border-2 border-[#A100FF] bg-black overflow-hidden shadow-[0_0_28px_rgba(161,0,255,0.35)]"
-    >
-      {/* scrolling strip */}
-      {/* <div
-        style={{
-          transform: `translateY(${translateY}px)`,
-          height: totalH,
-          transition: "none",
-        }}
-      >
-        {strip.map((nameIdx, i) => {
-          const isCentre = i === Math.floor(VISIBLE / 2);
-          const name = !spinning && !finalName ? "?" : (names[nameIdx] ?? "?");
-          return (
-            <div
-              key={i}
-              style={{ height: ITEM_H }}
-              className="flex items-center justify-center"
-            >
-              <span
-                className={`block max-w-full overflow-hidden text-ellipsis whitespace-nowrap px-4 font-extrabold tracking-wide select-none transition-transform duration-150 ${
-                  isCentre
-                    ? bouncing
-                      ? "scale-110 text-4xl text-[#A100FF]"
-                      : "scale-100 text-4xl text-[#A100FF]"
-                    : "scale-90 text-3xl text-[#333333]"
-                }`}
-              >
-                {name}
-              </span>
-            </div>
-          );
-        })}
-      </div> */}
-
-      {/* top fade */}
-      <div
-        className="absolute inset-x-0 top-0 pointer-events-none"
-        style={{
-          height: windowH * 0.45,
-          background: "linear-gradient(to bottom, #000000, transparent)",
-        }}
-      />
-      {/* bottom fade */}
-      <div
-        className="absolute inset-x-0 bottom-0 pointer-events-none"
-        style={{
-          height: windowH * 0.45,
-          background: "linear-gradient(to top, #000000, transparent)",
-        }}
-      />
-
-      {/* centre line indicators */}
-      <div className="absolute inset-x-0 top-0 bottom-0 pointer-events-none flex flex-col justify-between py-[1px]">
-        <div className="h-px bg-[#A100FF]/30" />
-        <div className="h-px bg-[#A100FF]/30" />
-      </div>
-    </div>
-  );
-}
-
 // ── Wheel screen (idle + spinning) ─────────────────────────────────────────────
 
 function WheelPhaseScreen() {
@@ -400,25 +213,29 @@ function WheelPhaseScreen() {
       {/* Wheel centered */}
       <div
         style={{
-          position: "absolute",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          gap: "2vh",
+          position: "fixed",
+          inset: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
-        className="flex flex-col items-center"
       >
-        <SlotMachine
-          names={wheelPlayers}
-          spinning={spinning}
-          finalName={spinning ? null : currentContestant}
-        />
         <SlotDrum
           players={wheelPlayers}
           spinning={spinning}
           finalName={currentContestant}
-          //spinDuration={SPIN_DURATION}
+          spinDuration={SPIN_DURATION}
         />
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          bottom: "2.5vh",
+          left: 0,
+          right: 0,
+          textAlign: "center",
+        }}
+      >
         <p
           style={{ fontSize: "1.2vw" }}
           className="text-[#666666] tracking-widest"
@@ -541,7 +358,17 @@ const DIFFICULTY_LEVELS = ["Easy", "Medium", "Hard"];
 
 function PrizeLadder({ currentLevel }: { currentLevel: number }) {
   return (
-    <div className="flex flex-col gap-[6px] w-56 shrink-0 self-start pt-2">
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "1vh",
+        width: "20vw",
+        maxWidth: "420px",
+        flexShrink: 0,
+        alignSelf: "flex-start",
+      }}
+    >
       {[...DIFFICULTY_LEVELS].reverse().map((label, ri) => {
         const idx = DIFFICULTY_LEVELS.length - 1 - ri;
         const isCurrent = idx === currentLevel;
@@ -549,14 +376,13 @@ function PrizeLadder({ currentLevel }: { currentLevel: number }) {
 
         let fill = "transparent";
         let stroke = "#333333";
-        let textColor = "text-white";
+        let textColor = "#ffffff";
 
         if (isCurrent) {
-          // colors handled by SVG gradient instead
         } else if (isAbove) {
           fill = "transparent";
           stroke = "#333333";
-          textColor = "text-[#333333]";
+          textColor = "#333333";
         } else {
           fill = "#1A1A1A";
           stroke = "#333333";
@@ -565,16 +391,25 @@ function PrizeLadder({ currentLevel }: { currentLevel: number }) {
         return (
           <div
             key={idx}
-            className={`relative h-[36px] w-full ${
-              isCurrent ? "scale-[1.05]" : ""
-            }`}
+            style={{
+              position: "relative",
+              height: "5vh",
+              width: "100%",
+              transform: isCurrent ? "scale(1.08)" : "scale(1)",
+              transition: "transform 0.2s ease",
+            }}
           >
-            {/* SVG background */}
             {isCurrent ? (
               <svg
                 viewBox="0 0 300 36"
                 preserveAspectRatio="none"
-                className="absolute inset-0 h-full w-full drop-shadow-[0_0_12px_rgba(255,180,0,0.6)]"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  height: "100%",
+                  width: "100%",
+                  filter: "drop-shadow(0 0 12px rgba(255,180,0,0.6))",
+                }}
               >
                 <defs>
                   <linearGradient
@@ -588,7 +423,6 @@ function PrizeLadder({ currentLevel }: { currentLevel: number }) {
                     <stop offset="50%" stopColor="#ffb300" />
                     <stop offset="100%" stopColor="#ff8f00" />
                   </linearGradient>
-
                   <linearGradient
                     id={`goldStroke-${idx}`}
                     x1="0"
@@ -600,18 +434,8 @@ function PrizeLadder({ currentLevel }: { currentLevel: number }) {
                     <stop offset="100%" stopColor="#ffcc80" />
                   </linearGradient>
                 </defs>
-
                 <path
-                  d="
-                    M 260 4
-                    H 30
-                    C 20 4 12 18 4 18
-                    C 12 18 20 32 30 32
-                    H 260
-                    C 270 32 278 18 296 18
-                    C 278 18 270 4 260 4
-                    Z
-                  "
+                  d="M 260 4 H 30 C 20 4 12 18 4 18 C 12 18 20 32 30 32 H 260 C 270 32 278 18 296 18 C 278 18 270 4 260 4 Z"
                   fill={`url(#goldGrad-${idx})`}
                   stroke={`url(#goldStroke-${idx})`}
                   strokeWidth="2.5"
@@ -622,19 +446,15 @@ function PrizeLadder({ currentLevel }: { currentLevel: number }) {
               <svg
                 viewBox="0 0 300 36"
                 preserveAspectRatio="none"
-                className="absolute inset-0 h-full w-full"
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  height: "100%",
+                  width: "100%",
+                }}
               >
                 <path
-                  d="
-                    M 260 4
-                    H 30
-                    C 20 4 12 18 4 18
-                    C 12 18 20 32 30 32
-                    H 260
-                    C 270 32 278 18 296 18
-                    C 278 18 270 4 260 4
-                    Z
-                  "
+                  d="M 260 4 H 30 C 20 4 12 18 4 18 C 12 18 20 32 30 32 H 260 C 270 32 278 18 296 18 C 278 18 270 4 260 4 Z"
                   fill={fill}
                   stroke={stroke}
                   strokeWidth="2"
@@ -643,14 +463,31 @@ function PrizeLadder({ currentLevel }: { currentLevel: number }) {
               </svg>
             )}
 
-            {/* CONTENT */}
             <div
-              className={`relative z-10 flex items-center justify-between px-4 h-full text-md font-bold ${textColor}`}
+              style={{
+                position: "relative",
+                zIndex: 10,
+                display: "flex",
+                alignItems: "center",
+                height: "100%",
+                paddingLeft: "1.5vw",
+                paddingRight: "1.5vw",
+                gap: "1vw",
+                fontSize: "1.1vw",
+                fontWeight: "bold",
+                color: textColor,
+              }}
             >
-              <span className="opacity-60 w-6 pl-1  tabular-nums">
+              <span
+                style={{
+                  opacity: 0.6,
+                  width: "2vw",
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
                 {idx + 1}
               </span>
-              <span className="flex-1 capitalize">{label}</span>
+              <span style={{ textTransform: "capitalize" }}>{label}</span>
             </div>
           </div>
         );
@@ -681,7 +518,7 @@ function AnswerButton({
   isTrap: boolean;
 }) {
   if (isHidden) {
-    return <div className="h-[72px] opacity-20" />;
+    return <div className="h-[96px] opacity-20" />;
   }
 
   let fill = "#070018";
@@ -709,7 +546,7 @@ function AnswerButton({
   }
 
   return (
-    <div className={`relative z-10 h-[72px] w-full ${shadow}`}>
+    <div className={`relative z-10 h-[96px] w-full ${shadow}`}>
       <svg
         viewBox="0 0 600 72"
         preserveAspectRatio="none"
@@ -757,11 +594,11 @@ function AnswerButton({
       </svg>
 
       <div className="relative z-10 flex h-full items-center gap-5 px-28">
-        <span className="w-10 shrink-0 text-xl font-extrabold text-[#ff8a00]">
+        <span className="w-10 shrink-0 text-2xl font-extrabold text-[#ff8a00]">
           {label}:
         </span>
 
-        <span className="text-lg font-semibold text-white">{text}</span>
+        <span className="text-3xl font-semibold text-white">{text}</span>
       </div>
     </div>
   );
@@ -998,23 +835,23 @@ function GameScreen({
         </div>
 
         <div className="text-right">
-          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">
+          <p className="text-lg uppercase tracking-[0.35em] text-slate-400">
             Contestant
           </p>
-          <p className="text-3xl font-extrabold tracking-wide text-[#f2eaff] drop-shadow-[0_0_12px_rgba(255,255,255,0.35)]">
+          <p className="text-4xl font-extrabold tracking-wide text-[#f2eaff] drop-shadow-[0_0_12px_rgba(255,255,255,0.35)]">
             {currentContestant}
           </p>
         </div>
       </header>
 
-      <main className="relative z-10 flex flex-1 gap-8 px-8 pb-12 pt-8">
-        <div className="flex flex-1 flex-col justify-end gap-8 pb-10">
+      <main className="relative z-10 flex flex-1 gap-8 px-8 pb-8 pt-8">
+        <div className="flex flex-1 flex-col justify-center gap-8">
           <div className="mx-auto w-full max-w-6xl">
-            <p className="mb-3 text-center text-sm uppercase tracking-[0.35em] text-[#ff8a00]">
+            <p className="mb-3 text-center text-2xl uppercase tracking-[0.35em] text-[#ff8a00]">
               {activeQuestion?.difficulty ?? "—"}
             </p>
 
-            <div className="relative w-full max-w-5xl mx-auto h-[120px]">
+            <div className="relative w-full max-w-5xl mx-auto h-[160px]">
               {/* SVG background */}
               <svg
                 viewBox="0 0 800 120"
@@ -1023,15 +860,15 @@ function GameScreen({
               >
                 <path
                   d="
-        M 680 10
-        H 120
-        C 90 10 70 60 40 60
-        C 70 60 90 110 120 110
-        H 680
-        C 710 110 730 60 760 60
-        C 730 60 710 10 680 10
-        Z
-      "
+                    M 680 10
+                    H 120
+                    C 90 10 70 60 40 60
+                    C 70 60 90 110 120 110
+                    H 680
+                    C 710 110 730 60 760 60
+                    C 730 60 710 10 680 10
+                    Z
+                  "
                   fill="#070018"
                   stroke="#d7d2ff"
                   strokeWidth="4"
@@ -1059,7 +896,7 @@ function GameScreen({
 
               {/* TEXT */}
               <div className="relative z-10 flex h-full items-center justify-center px-20 text-center">
-                <p className="text-4xl font-semibold leading-snug tracking-wide text-white">
+                <p className="text-5xl font-semibold leading-snug tracking-wide text-white">
                   {activeQuestion?.question}
                 </p>
               </div>
