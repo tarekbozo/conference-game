@@ -11,6 +11,7 @@ type SoundKey =
   | "correctLevel2"
   | "correctLevel3"
   | "wrong"
+  | "eliminated"
   | "lifeline";
 
 const audioFiles: Record<SoundKey, string> = {
@@ -21,6 +22,7 @@ const audioFiles: Record<SoundKey, string> = {
   correctLevel2: "/sounds/correct-level-2.mp3",
   correctLevel3: "/sounds/correct-level-3.mp3",
   wrong: "/sounds/wrong.mp3",
+  eliminated: "/sounds/eliminated.mp3",
   lifeline: "/sounds/lifeline.mp3",
 };
 
@@ -251,6 +253,10 @@ export function useScreenAudio({
 
     if (phase !== "selected") {
       startPlayedRef.current = false;
+    }
+
+    if (phase === "done" && lastPhaseRef.current !== "done") {
+      void playEffect("eliminated");
     }
 
     lastPhaseRef.current = phase;
