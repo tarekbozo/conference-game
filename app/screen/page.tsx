@@ -123,6 +123,7 @@ function WheelPhaseScreen() {
     selectedPlayers,
     eliminated,
     wheelPlayers,
+    wheelWinnerIndex,
   } = useGameStore();
 
   const spinning = phase === "spinning";
@@ -158,6 +159,7 @@ function WheelPhaseScreen() {
           players={wheelPlayers}
           spinning={spinning}
           finalName={currentContestant}
+          winnerIndex={wheelWinnerIndex}
           spinDuration={SPIN_DURATION}
         />
       </div>

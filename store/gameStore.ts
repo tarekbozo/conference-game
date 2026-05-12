@@ -11,7 +11,7 @@ export type Phase =
   | "done"
   | "winner";
 
-export const SPIN_DURATION = 4000;
+export const SPIN_DURATION = 6000;
 
 const WHEEL_NAMES = [
   "Lars Svensson",
@@ -36,10 +36,6 @@ const WHEEL_NAMES = [
   "Ida Forsgren",
 ];
 
-function getShuffledWheelNames(): string[] {
-  return [...WHEEL_NAMES].sort(() => Math.random() - 0.5);
-}
-
 export interface GameData {
   phase: Phase;
   wheelSpinning: boolean;
@@ -63,6 +59,7 @@ export interface GameData {
   forcedWinner: string | null;
   screenVisible: boolean;
   wheelPlayers: string[];
+  wheelWinnerIndex: number;
 }
 
 interface GameActions {
@@ -114,6 +111,7 @@ const initialData: GameData = {
   forcedWinner: null,
   screenVisible: false,
   wheelPlayers: WHEEL_NAMES,
+  wheelWinnerIndex: 0,
 };
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -131,10 +129,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ? state.forcedWinner
         : remaining[Math.floor(Math.random() * remaining.length)];
 
+    let wheelWinnerIndex = WHEEL_NAMES.indexOf(winner);
+    if (wheelWinnerIndex === -1) {
+      WHEEL_NAMES[0] = winner;
+      wheelWinnerIndex = 0;
+    }
+
     set({
       wheelSpinning: true,
       phase: "spinning",
-      wheelPlayers: getShuffledWheelNames(),
+      wheelPlayers: [...WHEEL_NAMES],
+      wheelWinnerIndex,
     });
 
     setTimeout(() => {
@@ -149,7 +154,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       });
       setTimeout(() => {
         set({ phase: "idle" });
-      }, 3000);
+      }, 4000);
     }, SPIN_DURATION);
   },
 

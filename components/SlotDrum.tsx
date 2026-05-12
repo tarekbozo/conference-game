@@ -9,6 +9,7 @@ export interface SlotDrumProps {
   players: string[];
   spinning: boolean;
   finalName: string | null;
+  winnerIndex?: number;
   spinDuration?: number;
   onSpinComplete?: () => void;
 }
@@ -17,27 +18,24 @@ export default function SlotDrum({
   players,
   spinning,
   finalName,
+  winnerIndex,
   onSpinComplete,
 }: SlotDrumProps) {
   const n = players.length;
   const [centerIndex, setCenterIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [glowing, setGlowing] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rafRef = useRef<number | null>(null);
   const glowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const orderRef = useRef<number[]>([...Array(n)].map((_, i) => i));
+  const scrollPosRef = useRef<number>(0);
+  const targetPosRef = useRef<number>(0);
+  const frameRef = useRef<number>(0);
 
-  function shuffleOrder() {
-    const arr = [...Array(n)].map((_, i) => i);
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
+  function cancelRaf() {
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
     }
-    orderRef.current = arr;
-  }
-
-  function clearTimers() {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     if (glowTimerRef.current) clearTimeout(glowTimerRef.current);
   }
 
@@ -46,37 +44,46 @@ export default function SlotDrum({
 
     if (spinning) {
       setGlowing(false);
-      clearTimers();
+      cancelRaf();
       setIsAnimating(true);
-      shuffleOrder();
 
-      const winnerIndex =
-        finalName && players.indexOf(finalName) >= 0
-          ? players.indexOf(finalName)
-          : Math.floor(Math.random() * n);
+      const resolvedWinnerIndex =
+        winnerIndex !== undefined && winnerIndex >= 0 ? winnerIndex : 0;
 
-      const totalTicks = 45 + winnerIndex;
-      const startIndex = (((winnerIndex - (totalTicks % n)) % n) + n) % n;
+      const totalFrames = 500;
+      const MAX_SPEED = 0.1;
 
-      let delay = 200;
-      let tick = 0;
-      let cur = startIndex;
-      setCenterIndex(startIndex);
+      // Total slots the sine curve will travel
+      const totalSlots = Math.ceil(totalFrames * MAX_SPEED * (2 / Math.PI));
 
-      const animate = () => {
-        tick++;
-        cur = (cur + 1) % n;
-        setCenterIndex(cur);
+      // Calculate target so drum lands EXACTLY on winner after totalSlots
+      const currentPos = scrollPosRef.current;
+      const currentMod = ((Math.round(currentPos) % n) + n) % n;
+      const distToWinner = (((resolvedWinnerIndex - currentMod) % n) + n) % n;
 
-        if (tick < 10) {
-          delay = Math.max(55, delay - 18);
-        } else if (tick > totalTicks - 16) {
-          delay += 24;
-        }
+      // How many full rotations fit in totalSlots
+      const minRotations = 3;
+      const fullRotations = Math.max(
+        minRotations,
+        Math.floor((totalSlots - distToWinner) / n),
+      );
+      targetPosRef.current = currentPos + fullRotations * n + distToWinner;
 
-        if (tick < totalTicks) {
-          timeoutRef.current = setTimeout(animate, delay);
+      let frame = 0;
+
+      const animateFrame = () => {
+        frame++;
+        const progress = frame / totalFrames;
+        const speed = Math.sin(progress * Math.PI) * MAX_SPEED;
+
+        scrollPosRef.current += Math.max(speed, 0);
+        setCenterIndex(((Math.round(scrollPosRef.current) % n) + n) % n);
+
+        if (frame < totalFrames) {
+          rafRef.current = requestAnimationFrame(animateFrame);
         } else {
+          scrollPosRef.current = targetPosRef.current;
+          setCenterIndex(((Math.round(targetPosRef.current) % n) + n) % n);
           setIsAnimating(false);
           setGlowing(true);
           glowTimerRef.current = setTimeout(() => setGlowing(false), 800);
@@ -84,23 +91,16 @@ export default function SlotDrum({
         }
       };
 
-      timeoutRef.current = setTimeout(animate, delay);
-      return clearTimers;
+      rafRef.current = requestAnimationFrame(animateFrame);
+      return cancelRaf;
     } else {
-      clearTimers();
+      cancelRaf();
       setIsAnimating(false);
-      if (finalName) {
-        const idx = players.indexOf(finalName);
-        if (idx >= 0) {
-          setCenterIndex(idx);
-          setGlowing(true);
-          glowTimerRef.current = setTimeout(() => setGlowing(false), 800);
-        }
-      }
+      // RAF completion handler already placed the drum on the correct slot and triggered glow
     }
-  }, [spinning, finalName, n]);
+  }, [spinning, winnerIndex, n]);
 
-  useEffect(() => () => clearTimers(), []);
+  useEffect(() => () => cancelRaf(), []);
 
   if (n === 0) return null;
 
@@ -177,13 +177,10 @@ export default function SlotDrum({
     const offset = i - CENTER;
     const absOffset = Math.abs(offset);
     const playerIdx = (((centerIndex + offset) % n) + n) % n;
-    const displayIdx = orderRef.current.length
-      ? orderRef.current[playerIdx]
-      : playerIdx;
-    const color = `hsl(${(displayIdx / n) * 360}, 90%, 58%)`;
+    const color = `hsl(${(playerIdx / n) * 360}, 90%, 58%)`;
     const isCenter = offset === 0;
     const style = slotStyles[Math.min(absOffset, slotStyles.length - 1)];
-    return { i, name: players[displayIdx], isCenter, color, style };
+    return { i, name: players[playerIdx], isCenter, color, style };
   });
 
   return (

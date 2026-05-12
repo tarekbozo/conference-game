@@ -37,6 +37,7 @@ export function useBroadcastSync(role: "admin" | "screen") {
           forcedWinner: null,
           screenVisible: state.screenVisible,
           wheelPlayers: state.wheelPlayers,
+          wheelWinnerIndex: state.wheelWinnerIndex,
         };
         channel.postMessage({ type: "SYNC", state: payload });
       });
