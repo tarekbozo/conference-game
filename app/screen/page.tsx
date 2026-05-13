@@ -44,7 +44,13 @@ function WaitingScreen({
           style={{ fontSize: "10vw" }}
         >
           <span style={{ color: "white" }}>REIN</span>
-          <svg className="hero-v" viewBox="0 0 107 118" xmlns="http://www.w3.org/2000/svg"><path d="M0 118L107 74.4053V43.5947L0 0V30.8107L69.1887 59L0 87.1893V118Z"></path></svg>
+          <svg
+            className="hero-v"
+            viewBox="0 0 107 118"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M0 118L107 74.4053V43.5947L0 0V30.8107L69.1887 59L0 87.1893V118Z"></path>
+          </svg>
           <span style={{ color: "white" }}>ENTOR?</span>
         </p>
 
@@ -832,8 +838,21 @@ function GameScreen({
               </svg>
 
               {/* TEXT */}
-              <div className="relative z-10 flex h-full items-center justify-center px-20 text-center">
-                <p className="text-5xl font-semibold leading-snug tracking-wide text-white">
+              <div className="relative z-10 flex h-full items-center justify-center px-24 text-center overflow-hidden">
+                <p
+                  className="font-semibold leading-snug tracking-wide text-white"
+                  style={{
+                    fontSize:
+                      activeQuestion && activeQuestion.question.length > 60
+                        ? activeQuestion.question.length > 100
+                          ? "1.6rem"
+                          : "2rem"
+                        : "2.8rem",
+                    wordBreak: "break-word",
+                    overflowWrap: "break-word",
+                    maxWidth: "100%",
+                  }}
+                >
                   {activeQuestion?.question}
                 </p>
               </div>
