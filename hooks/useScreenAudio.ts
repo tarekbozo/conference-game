@@ -12,7 +12,8 @@ type SoundKey =
   | "correctLevel3"
   | "wrong"
   | "eliminated"
-  | "lifeline";
+  | "lifeline"
+  | "playerRevealed";
 
 const audioFiles: Record<SoundKey, string> = {
   spinLoop: "/sounds/spin-loop.mp3",
@@ -24,6 +25,7 @@ const audioFiles: Record<SoundKey, string> = {
   wrong: "/sounds/wrong.mp3",
   eliminated: "/sounds/eliminated.mp3",
   lifeline: "/sounds/lifeline.mp3",
+  playerRevealed: "/sounds/player-revealed.mp3",
 };
 
 interface UseScreenAudioOptions {
@@ -236,8 +238,8 @@ export function useScreenAudio({
       return;
     }
 
-    if (phase === "idle") {
-      void playBackgroundMusic("spinLoop", 0.1);
+    if (phase === "idle" || phase === "reveal") {
+      void playBackgroundMusic("spinLoop", 0.25);
     } else if (phase === "spinning") {
       void playBackgroundMusic("spinLoop", 1);
     } else if (phase === "quiz") {
@@ -257,6 +259,10 @@ export function useScreenAudio({
 
     if (phase === "done" && lastPhaseRef.current !== "done") {
       void playEffect("eliminated");
+    }
+
+    if (phase === "reveal" && lastPhaseRef.current !== "reveal") {
+      void playEffect("playerRevealed");
     }
 
     lastPhaseRef.current = phase;
