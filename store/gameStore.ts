@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { ALL_PLAYERS, PLAYERS, PlayerQuestion } from "@/data/mockData";
+import { PLAYERS, PlayerQuestion } from "@/data/mockData";
 
 export type Phase =
   | "idle"
@@ -9,10 +9,10 @@ export type Phase =
   | "quiz"
   | "intermission"
   | "done"
-  | "winner";
+  | "winner"
+  | "reinventors";
 
-export const SPIN_DURATION = 6000;
-
+export const SPIN_DURATION = 10000;
 const WHEEL_NAMES = [
   "Lars Svensson",
   "Emma Nilsson",
@@ -56,7 +56,9 @@ export interface GameData {
   timerSeconds: number;
   usedLifelines: string[];
   winnerName: string | null;
-  forcedWinner: string | null;
+  reinventors: string[];
+  raffleQueue: string[];
+  raffleIndex: number;
   screenVisible: boolean;
   wheelPlayers: string[];
   wheelWinnerIndex: number;
@@ -65,7 +67,6 @@ export interface GameData {
 interface GameActions {
   spinOnce: () => void;
   showScreen: () => void;
-  setForcedWinner: (n: string | null) => void;
   setActiveQuestion: (q: PlayerQuestion) => void;
   revealTrapAnswer: () => void;
   startTimer: () => void;
@@ -83,6 +84,7 @@ interface GameActions {
   useLifelineAI: () => void;
   use5050: () => void;
   skipReveal: () => void;
+  showReinventors: (name1: string, name2: string) => void;
   syncState: (data: GameData) => void;
 }
 
@@ -108,7 +110,9 @@ const initialData: GameData = {
   timerSeconds: 30,
   usedLifelines: [],
   winnerName: null,
-  forcedWinner: null,
+  reinventors: [],
+  raffleQueue: PLAYERS.map((p) => p.name),
+  raffleIndex: 0,
   screenVisible: false,
   wheelPlayers: WHEEL_NAMES,
   wheelWinnerIndex: 0,
@@ -119,48 +123,49 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   spinOnce: () => {
     const state = get();
-    if (state.phase !== "idle") return;
-    const remaining = ALL_PLAYERS.filter(
-      (p) => !state.selectedPlayers.includes(p),
-    );
-    if (remaining.length === 0) return;
-    const winner =
-      state.forcedWinner && remaining.includes(state.forcedWinner)
-        ? state.forcedWinner
-        : remaining[Math.floor(Math.random() * remaining.length)];
+    if (state.wheelSpinning) return;
+    const { raffleQueue, raffleIndex } = state;
+    if (raffleIndex >= raffleQueue.length) return;
 
-    let wheelWinnerIndex = WHEEL_NAMES.indexOf(winner);
+    const winner = raffleQueue[raffleIndex];
+    const wheelNames = [...WHEEL_NAMES];
+    let wheelWinnerIndex = wheelNames.indexOf(winner);
     if (wheelWinnerIndex === -1) {
-      WHEEL_NAMES[0] = winner;
+      wheelNames[0] = winner;
       wheelWinnerIndex = 0;
     }
 
     set({
       wheelSpinning: true,
       phase: "spinning",
-      wheelPlayers: [...WHEEL_NAMES],
+      wheelPlayers: wheelNames,
       wheelWinnerIndex,
     });
 
     setTimeout(() => {
       const curr = get();
+      const nextIndex = curr.raffleIndex + 1;
       set({
         wheelSpinning: false,
         currentContestant: winner,
         selectedPlayers: [...curr.selectedPlayers, winner],
         spinRound: curr.spinRound + 1,
-        forcedWinner: null,
+        raffleIndex: nextIndex,
         phase: "reveal",
       });
       setTimeout(() => {
-        set({ phase: "idle" });
-      }, 4000);
+        const updated = get();
+        if (updated.raffleIndex < updated.raffleQueue.length) {
+          set({ phase: "idle" });
+          setTimeout(() => get().spinOnce(), 800);
+        } else {
+          set({ phase: "idle" });
+        }
+      }, 3000);
     }, SPIN_DURATION);
   },
 
   showScreen: () => set({ screenVisible: true }),
-
-  setForcedWinner: (n) => set({ forcedWinner: n }),
 
   setActiveQuestion: (q: PlayerQuestion) =>
     set((state) => ({
@@ -202,11 +207,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
   revealCurrentAnswer: () => set({ revealAnswer: true }),
 
   markCorrect: () => {
-    const { activeQuestion, currentContestant } = get();
+    const { activeQuestion, selectedPlayers, eliminated } = get();
     if (activeQuestion?.round === 3) {
       set({
-        phase: "winner",
-        winnerName: currentContestant,
+        phase: "reinventors",
+        reinventors: selectedPlayers.filter((p) => !eliminated.includes(p)),
         activeQuestion: null,
         playerAnswer: null,
         revealAnswer: false,
@@ -263,6 +268,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       phase: "idle",
       currentContestant: null,
       winnerName: null,
+      reinventors: [],
       activeQuestion: null,
       playerAnswer: null,
       revealAnswer: false,
@@ -316,6 +322,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }),
 
   skipReveal: () => set({ phase: "idle" }),
+
+  showReinventors: (name1, name2) =>
+    set({ phase: "reinventors", reinventors: [name1, name2] }),
 
   syncState: (data) => set(data),
 }));

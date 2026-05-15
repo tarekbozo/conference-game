@@ -50,7 +50,7 @@ export default function SlotDrum({
       const resolvedWinnerIndex =
         winnerIndex !== undefined && winnerIndex >= 0 ? winnerIndex : 0;
 
-      const totalFrames = 500;
+      const totalFrames = 600;
       const MAX_SPEED = 0.1;
 
       // Total slots the sine curve will travel

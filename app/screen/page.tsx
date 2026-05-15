@@ -1040,6 +1040,123 @@ function WinnerScreen({ name }: { name: string | null }) {
   );
 }
 
+// ── Reinventors screen ────────────────────────────────────────────────────────
+
+const CONFETTI_PIECES = [
+  { left: "5%", delay: "0s", dur: "3.2s", color: "#A100FF" },
+  { left: "10%", delay: "0.4s", dur: "2.8s", color: "#FFD700" },
+  { left: "16%", delay: "0.1s", dur: "3.5s", color: "#00E5FF" },
+  { left: "22%", delay: "0.7s", dur: "2.6s", color: "#FF4081" },
+  { left: "28%", delay: "0.3s", dur: "3.1s", color: "#A100FF" },
+  { left: "34%", delay: "0.9s", dur: "2.9s", color: "#69FF47" },
+  { left: "40%", delay: "0.2s", dur: "3.4s", color: "#FFD700" },
+  { left: "46%", delay: "0.6s", dur: "2.7s", color: "#FF4081" },
+  { left: "52%", delay: "0.0s", dur: "3.0s", color: "#A100FF" },
+  { left: "58%", delay: "0.5s", dur: "3.3s", color: "#00E5FF" },
+  { left: "64%", delay: "0.8s", dur: "2.5s", color: "#69FF47" },
+  { left: "70%", delay: "0.15s", dur: "3.6s", color: "#FFD700" },
+  { left: "76%", delay: "0.45s", dur: "2.8s", color: "#FF4081" },
+  { left: "82%", delay: "0.65s", dur: "3.2s", color: "#A100FF" },
+  { left: "88%", delay: "0.25s", dur: "2.9s", color: "#00E5FF" },
+  { left: "93%", delay: "0.75s", dur: "3.1s", color: "#69FF47" },
+  { left: "12%", delay: "1.1s", dur: "2.7s", color: "#FFD700" },
+  { left: "37%", delay: "1.3s", dur: "3.4s", color: "#FF4081" },
+  { left: "61%", delay: "1.0s", dur: "2.6s", color: "#A100FF" },
+  { left: "85%", delay: "1.2s", dur: "3.0s", color: "#69FF47" },
+];
+
+function ReinventorsScreen({ names }: { names: string[] }) {
+  return (
+    <div className="flex flex-col items-center min-h-screen bg-black overflow-hidden relative">
+      <style>{`
+        @keyframes confettiFall {
+          0%   { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+        @keyframes reinventorNames {
+          0%   { opacity: 0; transform: scale(0.5); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        .confetti-piece {
+          position: absolute;
+          top: 0;
+          width: 12px;
+          height: 18px;
+          border-radius: 3px;
+          animation: confettiFall linear infinite;
+        }
+        .reinventor-names {
+          animation: reinventorNames 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+      `}</style>
+
+      {CONFETTI_PIECES.map((p, i) => (
+        <div
+          key={i}
+          className="confetti-piece"
+          style={{
+            left: p.left,
+            backgroundColor: p.color,
+            animationDelay: p.delay,
+            animationDuration: p.dur,
+          }}
+        />
+      ))}
+
+      {/* Accenture logo */}
+      <img src="/logos/accenture.svg" />
+
+      {/* Content */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-[2vh]">
+        <div style={{ fontSize: "10vw", lineHeight: 1 }}>🏆</div>
+
+        <p
+          className="font-black text-white uppercase tracking-widest"
+          style={{ fontSize: "4vw" }}
+        >
+          YOU ARE BOTH
+        </p>
+
+        <p
+          className="font-black uppercase leading-none tracking-[0.06em]"
+          style={{ fontSize: "8vw" }}
+        >
+          <span style={{ color: "white" }}>REIN</span>
+          <svg
+            className="hero-v"
+            viewBox="0 0 107 118"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M0 118L107 74.4053V43.5947L0 0V30.8107L69.1887 59L0 87.1893V118Z"></path>
+          </svg>
+          <span style={{ color: "white" }}>VENTORS!</span>
+        </p>
+
+        <div className="reinventor-names flex items-center gap-[3vw] mt-[1vh]">
+          {names.map((name, i) => (
+            <span key={name} className="flex items-center gap-[3vw]">
+              {i > 0 && (
+                <span
+                  className="font-black text-white"
+                  style={{ fontSize: "4vw" }}
+                >
+                  &amp;
+                </span>
+              )}
+              <span
+                className="font-black"
+                style={{ fontSize: "5vw", color: "#A100FF" }}
+              >
+                {name}
+              </span>
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Done screen ────────────────────────────────────────────────────────────────
 
 function DoneScreen({ eliminated }: { eliminated: string | null }) {
@@ -1070,6 +1187,7 @@ export default function ScreenPage() {
     screenVisible,
     currentContestant,
     winnerName,
+    reinventors,
     activeQuestion,
     revealAnswer,
     playerAnswer,
@@ -1095,7 +1213,9 @@ export default function ScreenPage() {
       ? `reveal-${currentContestant}`
       : phase === "idle" || phase === "spinning"
         ? "wheel"
-        : phase;
+        : phase === "reinventors"
+          ? "reinventors"
+          : phase;
 
   let screen: React.ReactNode;
   if (!screenVisible) {
@@ -1125,6 +1245,8 @@ export default function ScreenPage() {
     screen = <IntermissionScreen />;
   } else if (phase === "winner") {
     screen = <WinnerScreen name={winnerName} />;
+  } else if (phase === "reinventors") {
+    screen = <ReinventorsScreen names={reinventors} />;
   } else if (phase === "done") {
     screen = <DoneScreen eliminated={currentContestant} />;
   } else {

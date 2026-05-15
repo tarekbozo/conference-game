@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { useBroadcastSync } from "@/hooks/useBroadcastSync";
-import { PLAYERS, ALL_PLAYERS, Player, PlayerQuestion } from "@/data/mockData";
+import { PLAYERS, PlayerQuestion } from "@/data/mockData";
 
 const LABELS = ["A", "B", "C", "D"];
 
@@ -20,6 +20,7 @@ const PHASE_BADGE: Record<string, string> = {
   reveal: "bg-[#A100FF]/30 text-white",
   quiz: "bg-green-800 text-green-200",
   done: "bg-[#333] text-white",
+  reinventors: "bg-yellow-600 text-white",
 };
 
 export default function AdminPage() {
@@ -37,8 +38,6 @@ export default function AdminPage() {
     aiThinking,
     spinOnce,
     showScreen,
-    setForcedWinner,
-    forcedWinner,
     setActiveQuestion,
     revealTrapAnswer,
     selectPlayerAnswer,
@@ -53,6 +52,9 @@ export default function AdminPage() {
     useLifelineAI,
     usedLifelines,
     winnerName,
+    reinventors,
+    raffleQueue,
+    raffleIndex,
     wheelSpinning,
     screenVisible,
     spinRound,
@@ -61,17 +63,17 @@ export default function AdminPage() {
     stopTimer,
     tickTimer,
     skipReveal,
+    showReinventors,
   } = useGameStore();
+
+  const [winner1, setWinner1] = useState(PLAYERS[0].name);
+  const [winner2, setWinner2] = useState(PLAYERS[1].name);
 
   useEffect(() => {
     if (!timerActive) return;
     const id = setInterval(() => tickTimer(), 1000);
     return () => clearInterval(id);
   }, [timerActive]);
-
-  const availablePlayers = ALL_PLAYERS.filter(
-    (p) => !selectedPlayers.includes(p),
-  );
 
   const handleSetActiveQuestion = (q: PlayerQuestion) => {
     setActiveQuestion(q);
@@ -115,7 +117,7 @@ export default function AdminPage() {
           </div>
 
           {(phase === "idle" || phase === "spinning") && (
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
               <button
                 onClick={showScreen}
                 disabled={screenVisible}
@@ -127,29 +129,30 @@ export default function AdminPage() {
               >
                 {screenVisible ? "✅ Screen on" : "▶ Show Screen"}
               </button>
-              <select
-                value={forcedWinner ?? ""}
-                onChange={(e) => setForcedWinner(e.target.value || null)}
-                className="bg-[#1A1A1A] border border-[#333] text-[#999] text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#A100FF]"
-              >
-                <option value="">— Force winner —</option>
-                {availablePlayers.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
               <button
-                disabled={!screenVisible || !forcedWinner || wheelSpinning}
+                disabled={!screenVisible || wheelSpinning || raffleIndex >= raffleQueue.length}
                 onClick={spinOnce}
-                className={`flex-1 p-3 rounded-lg text-md font-bold tracking-wide transition-all ${
-                  !screenVisible || !forcedWinner || wheelSpinning
+                className={`p-3 rounded-lg text-md font-bold tracking-wide transition-all ${
+                  !screenVisible || wheelSpinning || raffleIndex >= raffleQueue.length
                     ? "bg-[#333] opacity-40 cursor-not-allowed"
                     : "bg-[#A100FF] hover:bg-[#8800dd]"
                 }`}
               >
-                {wheelSpinning ? "⏳ Spinning…" : `🎡 Spin #${spinRound + 1}`}
+                {wheelSpinning ? "⏳ Spinning…" : `🎡 Start Raffle`}
               </button>
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[10px] text-[#666] uppercase tracking-widest">Raffle order</span>
+                <div className="flex gap-2">
+                  {raffleQueue.map((name, i) => (
+                    <span
+                      key={name}
+                      className={`text-xs font-bold ${i < raffleIndex ? "text-[#666] line-through" : "text-white"}`}
+                    >
+                      {i < raffleIndex ? "✓ " : `${i + 1}. `}{name}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
@@ -203,6 +206,20 @@ export default function AdminPage() {
                 className="ml-auto px-4 py-3 bg-yellow-600 hover:bg-yellow-500 rounded-lg text-xs font-bold transition-colors"
               >
                 🏆 Winner! Move to next player
+              </button>
+            </div>
+          )}
+
+          {phase === "reinventors" && (
+            <div className="flex items-center gap-3">
+              <span className="text-yellow-400 font-bold text-sm">
+                🏆 {reinventors.join(" & ")} are Reinventors!
+              </span>
+              <button
+                onClick={nextPlayer}
+                className="px-4 py-3 bg-yellow-600 hover:bg-yellow-500 rounded-lg text-xs font-bold"
+              >
+                🎉 Done — Reset for next round
               </button>
             </div>
           )}
@@ -443,6 +460,33 @@ export default function AdminPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+        {/* ── MANUAL CONTROLS ──────────────────────────────────────────────── */}
+        <div className="border-t border-[#333] p-4">
+          <p className="text-xs text-[#666] uppercase tracking-widest mb-3">
+            Manual Controls
+          </p>
+          <div className="flex items-center gap-3">
+            <input
+              value={winner1}
+              onChange={(e) => setWinner1(e.target.value)}
+              placeholder="Winner 1"
+              className="bg-[#1A1A1A] border border-[#333] text-white rounded px-3 py-2 text-sm focus:outline-none focus:border-[#A100FF] w-48"
+            />
+            <input
+              value={winner2}
+              onChange={(e) => setWinner2(e.target.value)}
+              placeholder="Winner 2"
+              className="bg-[#1A1A1A] border border-[#333] text-white rounded px-3 py-2 text-sm focus:outline-none focus:border-[#A100FF] w-48"
+            />
+            <button
+              onClick={() => showReinventors(winner1, winner2)}
+              disabled={!winner1.trim() || !winner2.trim()}
+              className="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg text-sm font-bold transition-colors"
+            >
+              🏆 Show Winners Screen
+            </button>
           </div>
         </div>
       </div>
