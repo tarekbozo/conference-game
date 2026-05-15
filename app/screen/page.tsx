@@ -661,68 +661,6 @@ function AIColleagueOverlay({
   );
 }
 
-// ── Circular timer ────────────────────────────────────────────────────────────
-
-function CircularTimer({ seconds }: { seconds: number }) {
-  const dotCount = 24;
-  const activeDots = Math.round((seconds / 30) * dotCount);
-  const cx = 40;
-  const cy = 40;
-  const r = 32;
-  const dotColors = ["#ef4444", "#f97316", "#22c55e"];
-  const textColor =
-    seconds > 19 ? "#f59e0b" : seconds > 9 ? "#f97316" : "#ef4444";
-
-  const dots = Array.from({ length: dotCount }, (_, i) => {
-    const angle = (i / dotCount) * 2 * Math.PI - Math.PI / 2;
-    return {
-      x: cx + r * Math.cos(angle),
-      y: cy + r * Math.sin(angle),
-      active: i < activeDots,
-      color: dotColors[i % dotColors.length],
-    };
-  });
-
-  return (
-    <div style={{ width: 80, height: 80 }}>
-      {seconds === 0 && (
-        <style>{`
-          @keyframes timerFlash { 0%,100%{opacity:1} 50%{opacity:0.15} }
-        `}</style>
-      )}
-      <svg width="80" height="80" viewBox="0 0 80 80">
-        {dots.map(({ x, y, active, color }, i) => (
-          <circle
-            key={i}
-            cx={x}
-            cy={y}
-            r={3}
-            fill={color}
-            opacity={active ? 1 : 0.15}
-          />
-        ))}
-        <text
-          x={cx}
-          y={cy}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fill={textColor}
-          fontSize="22"
-          fontWeight="900"
-          style={{
-            fontVariantNumeric: "tabular-nums",
-            ...(seconds === 0
-              ? { animation: "timerFlash 0.5s ease-in-out infinite" }
-              : undefined),
-          }}
-        >
-          {seconds}
-        </text>
-      </svg>
-    </div>
-  );
-}
-
 // ── Game screen (quiz phase) ───────────────────────────────────────────────────
 
 function GameScreen({
@@ -743,7 +681,6 @@ function GameScreen({
     hiddenAnswers,
     usedLifelines,
     showTrapAnswer,
-    timerSeconds,
   } = useGameStore();
   console.log(showTrapAnswer);
   if (!activeQuestion) return null;
@@ -774,7 +711,6 @@ function GameScreen({
               </div>
             );
           })}
-          <CircularTimer seconds={timerSeconds} />
         </div>
 
         <div className="text-right">

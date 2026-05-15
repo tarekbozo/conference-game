@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { useBroadcastSync } from "@/hooks/useBroadcastSync";
 import { PLAYERS, PlayerQuestion } from "@/data/mockData";
@@ -58,22 +58,12 @@ export default function AdminPage() {
     wheelSpinning,
     screenVisible,
     spinRound,
-    timerActive,
-    startTimer,
-    stopTimer,
-    tickTimer,
     skipReveal,
     showReinventors,
   } = useGameStore();
 
   const [winner1, setWinner1] = useState(PLAYERS[0].name);
   const [winner2, setWinner2] = useState(PLAYERS[1].name);
-
-  useEffect(() => {
-    if (!timerActive) return;
-    const id = setInterval(() => tickTimer(), 1000);
-    return () => clearInterval(id);
-  }, [timerActive]);
 
   const handleSetActiveQuestion = (q: PlayerQuestion) => {
     setActiveQuestion(q);
@@ -364,16 +354,6 @@ export default function AdminPage() {
                     </button>
                   );
                 })}
-                <button
-                  onClick={timerActive ? stopTimer : startTimer}
-                  className={`flex-1 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors border ${
-                    timerActive
-                      ? "border-red-600 text-red-400 bg-[#1A1A1A] hover:bg-red-900/20"
-                      : "border-[#555] text-[#aaa] bg-[#1A1A1A] hover:bg-[#333]"
-                  }`}
-                >
-                  {timerActive ? "⏹ Stop Timer" : "▶ Start Timer"}
-                </button>
               </div>
             </div>
           )}

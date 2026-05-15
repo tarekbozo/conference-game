@@ -1,5 +1,6 @@
 "use client";
 
+import { SPIN_DURATION } from "@/store/gameStore";
 import { useEffect, useRef, useState } from "react";
 
 const VISIBLE = 15;
@@ -17,7 +18,6 @@ export interface SlotDrumProps {
 export default function SlotDrum({
   players,
   spinning,
-  finalName,
   winnerIndex,
   onSpinComplete,
 }: SlotDrumProps) {
@@ -29,7 +29,6 @@ export default function SlotDrum({
   const glowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollPosRef = useRef<number>(0);
   const targetPosRef = useRef<number>(0);
-  const frameRef = useRef<number>(0);
 
   function cancelRaf() {
     if (rafRef.current !== null) {
@@ -47,39 +46,27 @@ export default function SlotDrum({
       cancelRaf();
       setIsAnimating(true);
 
-      const resolvedWinnerIndex =
-        winnerIndex !== undefined && winnerIndex >= 0 ? winnerIndex : 0;
-
-      const totalFrames = 600;
       const MAX_SPEED = 0.1;
-
-      // Total slots the sine curve will travel
-      const totalSlots = Math.ceil(totalFrames * MAX_SPEED * (2 / Math.PI));
-
-      // Calculate target so drum lands EXACTLY on winner after totalSlots
-      const currentPos = scrollPosRef.current;
-      const currentMod = ((Math.round(currentPos) % n) + n) % n;
-      const distToWinner = (((resolvedWinnerIndex - currentMod) % n) + n) % n;
-
-      // How many full rotations fit in totalSlots
-      const minRotations = 3;
-      const fullRotations = Math.max(
-        minRotations,
-        Math.floor((totalSlots - distToWinner) / n),
-      );
-      targetPosRef.current = currentPos + fullRotations * n + distToWinner;
-
-      let frame = 0;
+      const duration = SPIN_DURATION - 500;
+      const startTime = Date.now();
 
       const animateFrame = () => {
-        frame++;
-        const progress = frame / totalFrames;
-        const speed = Math.sin(progress * Math.PI) * MAX_SPEED;
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+
+        let speed: number;
+        if (progress < 0.1) {
+          speed = MAX_SPEED * (progress / 0.1);
+        } else if (progress < 0.8) {
+          speed = MAX_SPEED;
+        } else {
+          speed = MAX_SPEED * (1 - (progress - 0.8) / 0.2);
+        }
 
         scrollPosRef.current += Math.max(speed, 0);
         setCenterIndex(((Math.round(scrollPosRef.current) % n) + n) % n);
 
-        if (frame < totalFrames) {
+        if (progress < 1) {
           rafRef.current = requestAnimationFrame(animateFrame);
         } else {
           scrollPosRef.current = targetPosRef.current;
@@ -177,7 +164,7 @@ export default function SlotDrum({
     const offset = i - CENTER;
     const absOffset = Math.abs(offset);
     const playerIdx = (((centerIndex + offset) % n) + n) % n;
-    const color = `hsl(${(playerIdx / n) * 360}, 90%, 58%)`;
+    const color = `hsl(${(playerIdx % 20) * 18}, 90%, 58%)`;
     const isCenter = offset === 0;
     const style = slotStyles[Math.min(absOffset, slotStyles.length - 1)];
     return { i, name: players[playerIdx], isCenter, color, style };

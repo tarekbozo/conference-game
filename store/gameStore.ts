@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { PLAYERS, PlayerQuestion } from "@/data/mockData";
+import { PLAYERS, PlayerQuestion, WHEEL_NAMES } from "@/data/mockData";
 
 export type Phase =
   | "idle"
@@ -13,28 +13,6 @@ export type Phase =
   | "reinventors";
 
 export const SPIN_DURATION = 10000;
-const WHEEL_NAMES = [
-  "Lars Svensson",
-  "Emma Nilsson",
-  "Johan Eriksson",
-  "Maria Larsson",
-  "Anders Karlsson",
-  "Sofia Andersson",
-  "Mikael Lindström",
-  "Klara Persson",
-  "Oskar Gustafsson",
-  "Maja Olsson",
-  "Filip Johansson",
-  "Hanna Pettersson",
-  "Gustav Magnusson",
-  "Lina Björk",
-  "Erik Holm",
-  "Sara Lindgren",
-  "Tobias Berg",
-  "Astrid Nyström",
-  "Viktor Strand",
-  "Ida Forsgren",
-];
 
 export interface GameData {
   phase: Phase;
@@ -52,8 +30,6 @@ export interface GameData {
   aiWrongAnswer: number | null;
   hiddenAnswers: number[];
   showTrapAnswer: boolean;
-  timerActive: boolean;
-  timerSeconds: number;
   usedLifelines: string[];
   winnerName: string | null;
   reinventors: string[];
@@ -69,10 +45,6 @@ interface GameActions {
   showScreen: () => void;
   setActiveQuestion: (q: PlayerQuestion) => void;
   revealTrapAnswer: () => void;
-  startTimer: () => void;
-  stopTimer: () => void;
-  resetTimer: () => void;
-  tickTimer: () => void;
   selectPlayerAnswer: (i: number) => void;
   revealCurrentAnswer: () => void;
   markCorrect: () => void;
@@ -106,8 +78,6 @@ const initialData: GameData = {
   aiWrongAnswer: null,
   hiddenAnswers: [],
   showTrapAnswer: false,
-  timerActive: false,
-  timerSeconds: 30,
   usedLifelines: [],
   winnerName: null,
   reinventors: [],
@@ -179,26 +149,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       aiWrongAnswer: null,
       hiddenAnswers: [],
       showTrapAnswer: false,
-      timerActive: true,
-      timerSeconds: 30,
       phase: "quiz",
     })),
 
   revealTrapAnswer: () => set({ showTrapAnswer: true }),
 
-  startTimer: () => set({ timerActive: true, timerSeconds: 30 }),
-  stopTimer: () => set({ timerActive: false }),
-  resetTimer: () => set({ timerActive: false, timerSeconds: 30 }),
-  tickTimer: () => {
-    const { timerSeconds } = get();
-    const next = Math.max(0, timerSeconds - 1);
-    set({ timerSeconds: next, ...(next === 0 ? { timerActive: false } : {}) });
-  },
-
   selectPlayerAnswer: (i) =>
     set({
       playerAnswer: i,
-      timerActive: false,
       aiThinking: false,
       aiReveal: false,
       aiWrongAnswer: null,
@@ -217,8 +175,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
         revealAnswer: false,
         hiddenAnswers: [],
         showTrapAnswer: false,
-        timerActive: false,
-        timerSeconds: 30,
         aiThinking: false,
         aiReveal: false,
         aiWrongAnswer: null,
@@ -232,8 +188,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
         revealAnswer: false,
         hiddenAnswers: [],
         showTrapAnswer: false,
-        timerActive: false,
-        timerSeconds: 30,
         aiThinking: false,
         aiReveal: false,
         aiWrongAnswer: null,
@@ -254,8 +208,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       phase: "done",
       hiddenAnswers: [],
       showTrapAnswer: false,
-      timerActive: false,
-      timerSeconds: 30,
       usedLifelines: [],
       aiThinking: false,
       aiReveal: false,
@@ -274,8 +226,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       revealAnswer: false,
       hiddenAnswers: [],
       showTrapAnswer: false,
-      timerActive: false,
-      timerSeconds: 30,
       usedLifelines: [],
       aiThinking: false,
       aiReveal: false,

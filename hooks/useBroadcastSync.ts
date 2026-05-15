@@ -30,8 +30,6 @@ export function useBroadcastSync(role: "admin" | "screen") {
           aiWrongAnswer: state.aiWrongAnswer,
           hiddenAnswers: state.hiddenAnswers,
           showTrapAnswer: state.showTrapAnswer,
-          timerActive: state.timerActive,
-          timerSeconds: state.timerSeconds,
           usedLifelines: state.usedLifelines,
           winnerName: state.winnerName,
           reinventors: state.reinventors,
