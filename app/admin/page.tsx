@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useGameStore } from "@/store/gameStore";
 import { useBroadcastSync } from "@/hooks/useBroadcastSync";
-import { PLAYERS, PlayerQuestion } from "@/data/mockData";
+import { PLAYERS, PlayerQuestion, WINNERS } from "@/data/mockData";
 
 const LABELS = ["A", "B", "C", "D"];
 
@@ -62,8 +62,12 @@ export default function AdminPage() {
     showReinventors,
   } = useGameStore();
 
-  const [winner1, setWinner1] = useState(PLAYERS[0].name);
-  const [winner2, setWinner2] = useState(PLAYERS[1].name);
+  const [winner1, setWinner1] = useState(
+    PLAYERS.find((p) => p.id === WINNERS[0])?.name ?? ""
+  );
+  const [winner2, setWinner2] = useState(
+    PLAYERS.find((p) => p.id === WINNERS[1])?.name ?? ""
+  );
 
   const handleSetActiveQuestion = (q: PlayerQuestion) => {
     setActiveQuestion(q);

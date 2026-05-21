@@ -153,6 +153,8 @@ export const PLAYERS: Player[] = [
 
 export const ALL_PLAYERS: string[] = PLAYERS.map((p) => p.name);
 
+export const WINNERS: [string, string] = ["p1", "p2"];
+
 export const WHEEL_SEGMENT_COUNT = 16;
 
 export const WHEEL_NAMES = [
