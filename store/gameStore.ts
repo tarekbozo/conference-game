@@ -12,7 +12,9 @@ export type Phase =
   | "winner"
   | "reinventors";
 
-export const SPIN_DURATION = 10000;
+export const SPIN_DURATION = 10000;       // ms — total spin animation
+export const BETWEEN_SPIN_DELAY = 3000;   // ms — reveal pause before next spin
+export const POST_SPIN_IDLE_DELAY = 800;  // ms — idle gap before drum resets for next spin
 
 export interface GameData {
   phase: Phase;
@@ -42,6 +44,7 @@ export interface GameData {
 
 interface GameActions {
   spinOnce: () => void;
+  onSpinComplete: () => void;
   showScreen: () => void;
   setActiveQuestion: (q: PlayerQuestion) => void;
   revealTrapAnswer: () => void;
@@ -111,28 +114,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
       wheelPlayers: wheelNames,
       wheelWinnerIndex,
     });
+    // Reveal is triggered by onSpinComplete callback from SlotDrum, not a timeout here.
+  },
 
+  // Called by SlotDrum when its animation ends
+  onSpinComplete: () => {
+    const curr = get();
+    if (!curr.wheelSpinning) return;
+    const winner = curr.raffleQueue[curr.raffleIndex];
+    const nextIndex = curr.raffleIndex + 1;
+    set({
+      wheelSpinning: false,
+      currentContestant: winner,
+      selectedPlayers: [...curr.selectedPlayers, winner],
+      spinRound: curr.spinRound + 1,
+      raffleIndex: nextIndex,
+      phase: "reveal",
+    });
     setTimeout(() => {
-      const curr = get();
-      const nextIndex = curr.raffleIndex + 1;
-      set({
-        wheelSpinning: false,
-        currentContestant: winner,
-        selectedPlayers: [...curr.selectedPlayers, winner],
-        spinRound: curr.spinRound + 1,
-        raffleIndex: nextIndex,
-        phase: "reveal",
-      });
-      setTimeout(() => {
-        const updated = get();
-        if (updated.raffleIndex < updated.raffleQueue.length) {
-          set({ phase: "idle" });
-          setTimeout(() => get().spinOnce(), 800);
-        } else {
-          set({ phase: "idle" });
-        }
-      }, 3000);
-    }, SPIN_DURATION);
+      const updated = get();
+      set({ phase: "idle" });
+      if (updated.raffleIndex < updated.raffleQueue.length) {
+        setTimeout(() => get().spinOnce(), POST_SPIN_IDLE_DELAY);
+      }
+    }, BETWEEN_SPIN_DELAY);
   },
 
   showScreen: () => set({ screenVisible: true }),

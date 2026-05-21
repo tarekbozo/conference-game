@@ -130,6 +130,7 @@ function WheelPhaseScreen() {
     eliminated,
     wheelPlayers,
     wheelWinnerIndex,
+    onSpinComplete,
   } = useGameStore();
 
   const spinning = phase === "spinning";
@@ -167,6 +168,7 @@ function WheelPhaseScreen() {
           finalName={currentContestant}
           winnerIndex={wheelWinnerIndex}
           spinDuration={SPIN_DURATION}
+          onSpinComplete={onSpinComplete}
         />
       </div>
       <div
@@ -1145,13 +1147,11 @@ export default function ScreenPage() {
 
   const transitionKey = !screenVisible
     ? "waiting"
-    : phase === "reveal"
-      ? `reveal-${currentContestant}`
-      : phase === "idle" || phase === "spinning"
-        ? "wheel"
-        : phase === "reinventors"
-          ? "reinventors"
-          : phase;
+    : phase === "idle" || phase === "spinning" || phase === "reveal"
+      ? "wheel"
+      : phase === "reinventors"
+        ? "reinventors"
+        : phase;
 
   let screen: React.ReactNode;
   if (!screenVisible) {
@@ -1161,10 +1161,8 @@ export default function ScreenPage() {
         onEnableAudio={() => setAudioEnabled(true)}
       />
     );
-  } else if (phase === "idle" || phase === "spinning") {
+  } else if (phase === "idle" || phase === "spinning" || phase === "reveal") {
     screen = <WheelPhaseScreen />;
-  } else if (phase === "reveal") {
-    screen = <NameRevealScreen name={currentContestant} />;
   } else if (phase === "selected") {
     screen = <SelectedScreen contestant={currentContestant} />;
   } else if (phase === "quiz") {
