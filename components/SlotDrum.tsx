@@ -272,6 +272,8 @@ export default function SlotDrum({
         width: "22vw",
         minWidth: 280,
         maxWidth: 420,
+        paddingLeft: 8,
+        paddingRight: 8,
         background: "#000",
         borderRadius: 24,
         boxShadow: "none",

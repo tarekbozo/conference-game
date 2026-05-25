@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { PLAYERS, PlayerQuestion, WHEEL_NAMES } from "@/data/mockData";
+import { PLAYERS, PlayerQuestion, WHEEL_NAMES, WINNERS } from "@/data/mockData";
 
 export type Phase =
   | "idle"
@@ -174,7 +174,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (activeQuestion?.round === 3) {
       set({
         phase: "reinventors",
-        reinventors: selectedPlayers.filter((p) => !eliminated.includes(p)),
+        reinventors: WINNERS.map((id) => PLAYERS.find((p) => p.id === id)?.name ?? "").filter(Boolean) as string[],
         activeQuestion: null,
         playerAnswer: null,
         revealAnswer: false,
