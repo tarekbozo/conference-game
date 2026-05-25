@@ -462,7 +462,7 @@ function AnswerButton({
   isTrap: boolean;
 }) {
   if (isHidden) {
-    return <div className="h-[96px] opacity-20" />;
+    return <div style={{ height: "9vh" }} className="opacity-20" />;
   }
 
   let fill = "#070018";
@@ -490,7 +490,7 @@ function AnswerButton({
   }
 
   return (
-    <div className={`relative z-10 h-[96px] w-full ${shadow}`}>
+    <div className={`relative z-10 w-full ${shadow}`} style={{ height: "9vh" }}>
       <svg
         viewBox="0 0 600 72"
         preserveAspectRatio="none"
@@ -537,12 +537,12 @@ function AnswerButton({
         )}
       </svg>
 
-      <div className="relative z-10 flex h-full items-center gap-5 px-28">
-        <span className="w-10 shrink-0 text-2xl font-extrabold text-[#ff8a00]">
+      <div className="relative z-10 flex h-full items-center" style={{ gap: "1vw", paddingLeft: "20%", paddingRight: "20%" }}>
+        <span className="shrink-0 font-extrabold text-[#ff8a00]" style={{ fontSize: "1.2vw", width: "2.5vw" }}>
           {label}:
         </span>
 
-        <span className="text-3xl font-semibold text-white">{text}</span>
+        <span className="font-semibold text-white" style={{ fontSize: "1.3vw" }}>{text}</span>
       </div>
     </div>
   );
@@ -691,8 +691,8 @@ function GameScreen({
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,#38108f_0%,#08001f_38%,#010006_75%)] opacity-90" />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_58%,rgba(255,255,255,0.22),transparent_18%)]" />
 
-      <header className="relative z-10 flex items-center justify-between px-10 py-5">
-        <div className="flex gap-3 items-center">
+      <header className="relative z-10 flex items-center justify-between" style={{ padding: "1.5vh 2.5vw" }}>
+        <div className="flex items-center" style={{ gap: "0.8vw" }}>
           {[
             { label: "50:50", emoji: "✂️", id: "5050" },
             { label: "AI Colleague", emoji: "🤖", id: "ai" },
@@ -702,13 +702,14 @@ function GameScreen({
             return (
               <div
                 key={label}
-                className={`flex items-center gap-2 rounded-full border-2 px-5 py-2.5 text-base font-bold tracking-wide shadow-[0_0_18px_rgba(255,255,255,0.18)] ${
+                className={`flex items-center rounded-full border-2 font-bold tracking-wide shadow-[0_0_18px_rgba(255,255,255,0.18)] ${
                   used
                     ? "border-slate-600 bg-[#120d25] text-slate-500 opacity-45 line-through"
                     : "border-[#d7d2ff] bg-[#10002c] text-[#f2eaff]"
                 }`}
+                style={{ padding: "0.6vh 1.3vw", gap: "0.5vw", fontSize: "1vw" }}
               >
-                <span className="text-lg">{used ? "✕" : emoji}</span>
+                <span>{used ? "✕" : emoji}</span>
                 <span>{label}</span>
               </div>
             );
@@ -716,23 +717,23 @@ function GameScreen({
         </div>
 
         <div className="text-right">
-          <p className="text-lg uppercase tracking-[0.35em] text-slate-400">
+          <p className="uppercase tracking-[0.35em] text-slate-400" style={{ fontSize: "1vw" }}>
             Contestant
           </p>
-          <p className="text-4xl font-extrabold tracking-wide text-[#f2eaff] drop-shadow-[0_0_12px_rgba(255,255,255,0.35)]">
+          <p className="font-extrabold tracking-wide text-[#f2eaff] drop-shadow-[0_0_12px_rgba(255,255,255,0.35)]" style={{ fontSize: "2.2vw" }}>
             {currentContestant}
           </p>
         </div>
       </header>
 
-      <main className="relative z-10 flex flex-1 gap-8 px-8 pb-8 pt-8">
-        <div className="flex flex-1 flex-col justify-center gap-8">
-          <div className="mx-auto w-full max-w-6xl">
-            <p className="mb-3 text-center text-2xl uppercase tracking-[0.35em] text-[#ff8a00]">
+      <main className="relative z-10 flex flex-1 px-[2vw] pb-[2vh] pt-[2vh]" style={{ gap: "2vw" }}>
+        <div className="flex flex-1 flex-col justify-center" style={{ gap: "2.5vh" }}>
+          <div className="mx-auto w-full" style={{ maxWidth: "80%" }}>
+            <p className="text-center uppercase tracking-[0.35em] text-[#ff8a00]" style={{ fontSize: "1.4vw", marginBottom: "0.8vh" }}>
               {activeQuestion?.difficulty ?? "—"}
             </p>
 
-            <div className="relative w-full max-w-5xl mx-auto h-[160px]">
+            <div className="relative w-full mx-auto" style={{ maxWidth: "95%", height: "18vh" }}>
               {/* SVG background */}
               <svg
                 viewBox="0 0 800 120"
@@ -776,16 +777,16 @@ function GameScreen({
               </svg>
 
               {/* TEXT */}
-              <div className="relative z-10 flex h-full items-center justify-center px-24 text-center overflow-hidden">
+              <div className="relative z-10 flex h-full items-center justify-center text-center overflow-hidden" style={{ paddingLeft: "16%", paddingRight: "16%" }}>
                 <p
                   className="font-semibold leading-snug tracking-wide text-white"
                   style={{
                     fontSize:
                       activeQuestion && activeQuestion.question.length > 60
                         ? activeQuestion.question.length > 100
-                          ? "1.6rem"
-                          : "2rem"
-                        : "2.8rem",
+                          ? "1.4vw"
+                          : "1.8vw"
+                        : "2.2vw",
                     wordBreak: "break-word",
                     overflowWrap: "break-word",
                     maxWidth: "100%",
@@ -797,11 +798,11 @@ function GameScreen({
             </div>
           </div>
 
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
+          <div className="mx-auto flex w-full flex-col" style={{ maxWidth: "80%", gap: "1.5vh" }}>
             {[0, 2].map((start) => (
-              <div key={start} className="relative grid grid-cols-2 gap-x-20">
+              <div key={start} className="relative grid grid-cols-2" style={{ columnGap: "5vw" }}>
                 {/* middle connector between left and right answers */}
-                <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 h-[3px] w-48 -translate-x-1/2 -translate-y-1/2 bg-[#d7d2ff]" />
+                <div className="pointer-events-none absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-1/2 bg-[#d7d2ff]" style={{ height: "0.15vh", width: "12vw" }} />
 
                 {activeQuestion.answers
                   .slice(start, start + 2)
@@ -828,8 +829,8 @@ function GameScreen({
 
           {showTrapAnswer && activeQuestion.trapAnswer && (
             <div
-              className="mx-auto w-full max-w-6xl"
-              style={{ animation: "trapReveal 0.6s ease-out forwards" }}
+              className="mx-auto w-full"
+              style={{ maxWidth: "80%", animation: "trapReveal 0.6s ease-out forwards" }}
             >
               <style>{`
                 @keyframes trapReveal {
@@ -837,10 +838,10 @@ function GameScreen({
                   100% { opacity: 1; transform: translateY(0); }
                 }
               `}</style>
-              <p className="text-center text-xl font-extrabold text-red-500 tracking-widest uppercase mb-3">
+              <p className="text-center font-extrabold text-red-500 tracking-widest uppercase" style={{ fontSize: "1.2vw", marginBottom: "0.8vh" }}>
                 THE CORRECT ANSWER WAS...
               </p>
-              <div className="relative h-[90px] w-full drop-shadow-[0_0_28px_rgba(251,146,60,0.6)]">
+              <div className="relative w-full drop-shadow-[0_0_28px_rgba(251,146,60,0.6)]" style={{ height: "9vh" }}>
                 <svg
                   viewBox="0 0 600 90"
                   preserveAspectRatio="none"
@@ -870,11 +871,11 @@ function GameScreen({
                     strokeWidth="3"
                   />
                 </svg>
-                <div className="relative z-10 flex h-full items-center gap-5 px-48">
-                  <span className="w-10 shrink-0 text-2xl font-extrabold text-amber-400">
+                <div className="relative z-10 flex h-full items-center" style={{ gap: "1vw", paddingLeft: "20%", paddingRight: "20%" }}>
+                  <span className="shrink-0 font-extrabold text-amber-400" style={{ fontSize: "1.4vw", width: "2.5vw" }}>
                     E:
                   </span>
-                  <span className="text-2xl font-bold text-amber-200 ">
+                  <span className="font-bold text-amber-200" style={{ fontSize: "1.4vw" }}>
                     {activeQuestion.trapAnswer}
                   </span>
                 </div>
@@ -1100,12 +1101,12 @@ function ReinventorsScreen({ names }: { names: string[] }) {
 function DoneScreen({ eliminated }: { eliminated: string | null }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-black">
-      <div className="text-center space-y-6 px-12">
-        <div className="text-9xl">❌</div>
-        <p className="text-5xl font-extrabold text-red-400 tracking-widest uppercase">
+      <div className="text-center space-y-[3vh] px-[3vw]">
+        <div style={{ fontSize: "8vw" }}>❌</div>
+        <p className="font-extrabold text-red-400 tracking-widest uppercase" style={{ fontSize: "3.5vw" }}>
           Eliminated!
         </p>
-        <p className="text-7xl font-extrabold text-white tracking-wide">
+        <p className="font-extrabold text-white tracking-wide" style={{ fontSize: "5vw" }}>
           {eliminated}
         </p>
       </div>

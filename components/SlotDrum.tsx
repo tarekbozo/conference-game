@@ -10,14 +10,25 @@ import { useEffect, useRef, useState } from "react";
 const VISIBLE = 15;
 const CENTER = Math.floor(VISIBLE / 2); // index 7
 
-/** Fixed pixel height of every bar in the strip. */
-const BAR_HEIGHT = 52;
+/**
+ * Bar height and gap as a percentage of viewport height.
+ * At runtime we compute actual px from window.innerHeight so the drum
+ * always fills ~80vh regardless of resolution.
+ */
+const BAR_HEIGHT_VH = 4.8; // each bar ≈ 4.8vh
+const BAR_GAP_VH = 0.35; // gap ≈ 0.35vh
 
-/** Gap between bars (px). */
-const BAR_GAP = 4;
-
-/** Full step size per bar slot (height + gap). */
-const STEP = BAR_HEIGHT + BAR_GAP;
+function getBarHeight() {
+  if (typeof window === "undefined") return 52;
+  return (BAR_HEIGHT_VH / 100) * window.innerHeight;
+}
+function getBarGap() {
+  if (typeof window === "undefined") return 4;
+  return (BAR_GAP_VH / 100) * window.innerHeight;
+}
+function getStep() {
+  return getBarHeight() + getBarGap();
+}
 
 /**
  * Total number of names in the spin strip (excluding the lead-in from the
@@ -98,20 +109,23 @@ function buildSpinStrip(
 // ─── translateY helper ────────────────────────────────────────────────────────
 
 function translateForIndex(idx: number): number {
+  const STEP = getStep();
+  const BAR_GAP = getBarGap();
   return -(idx * STEP) + CENTER * STEP + BAR_GAP / 2;
 }
 
 // ─── Bar appearance table ─────────────────────────────────────────────────────
 
+/** Font sizes in vw so they scale with screen width */
 const slotStyles = [
-  { width: "100%", fontSize: 20, fontWeight: 800, opacity: 1,    borderRadius: 14 },
-  { width:  "92%", fontSize: 16, fontWeight: 700, opacity: 0.88, borderRadius: 16 },
-  { width:  "84%", fontSize: 13, fontWeight: 600, opacity: 0.65, borderRadius: 20 },
-  { width:  "74%", fontSize: 11, fontWeight: 500, opacity: 0.42, borderRadius: 24 },
-  { width:  "63%", fontSize:  9, fontWeight: 400, opacity: 0.25, borderRadius: 28 },
-  { width:  "52%", fontSize:  7, fontWeight: 300, opacity: 0.14, borderRadius: 32 },
-  { width:  "40%", fontSize:  0, fontWeight: 200, opacity: 0.08, borderRadius: 36 },
-  { width:  "28%", fontSize:  0, fontWeight: 100, opacity: 0.04, borderRadius: 40 },
+  { width: "100%", fontSize: "1.3vw", fontWeight: 800, opacity: 1,    borderRadius: "0.7vw" },
+  { width:  "92%", fontSize: "1.1vw", fontWeight: 700, opacity: 0.88, borderRadius: "0.8vw" },
+  { width:  "84%", fontSize: "0.9vw", fontWeight: 600, opacity: 0.65, borderRadius: "1vw" },
+  { width:  "74%", fontSize: "0.7vw", fontWeight: 500, opacity: 0.42, borderRadius: "1.2vw" },
+  { width:  "63%", fontSize: "0.55vw", fontWeight: 400, opacity: 0.25, borderRadius: "1.4vw" },
+  { width:  "52%", fontSize: "0.4vw", fontWeight: 300, opacity: 0.14, borderRadius: "1.6vw" },
+  { width:  "40%", fontSize: "0",   fontWeight: 200, opacity: 0.08, borderRadius: "1.8vw" },
+  { width:  "28%", fontSize: "0",   fontWeight: 100, opacity: 0.04, borderRadius: "2vw" },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -232,7 +246,7 @@ export default function SlotDrum({
       const progress = easeInOutQuint(t);
 
       const currentY = startY - totalDistance * progress;
-      const centerIdx = Math.round((startY - currentY) / STEP) + CENTER;
+      const centerIdx = Math.round((startY - currentY) / getStep()) + CENTER;
       const clampedCenter = Math.max(0, Math.min(centerIdx, newStrip.length - 1));
 
       setTranslateY(currentY);
@@ -260,6 +274,9 @@ export default function SlotDrum({
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
+  const BAR_HEIGHT = getBarHeight();
+  const BAR_GAP = getBarGap();
+  const STEP = getStep();
   const drumHeight = VISIBLE * BAR_HEIGHT + (VISIBLE - 1) * BAR_GAP;
   const visibleFrom = Math.max(0, visibleCenter - CENTER - 1);
   const visibleTo   = Math.min(strip.length - 1, visibleCenter + CENTER + 1);
@@ -269,13 +286,12 @@ export default function SlotDrum({
       style={{
         position: "relative",
         height: drumHeight,
-        width: "22vw",
-        minWidth: 280,
-        maxWidth: 420,
-        paddingLeft: 8,
-        paddingRight: 8,
+        width: "28vw",
+        minWidth: "20vw",
+        paddingLeft: "0.4vw",
+        paddingRight: "0.4vw",
         background: "#000",
-        borderRadius: 24,
+        borderRadius: "1.2vw",
         boxShadow: "none",
         overflow: "hidden",
       }}
@@ -330,7 +346,7 @@ export default function SlotDrum({
                   transition: "box-shadow 200ms ease",
                 }}
               >
-                {style.fontSize > 0 && (
+                {style.fontSize !== "0" && (
                   <span
                     style={{
                       fontWeight: style.fontWeight,
@@ -339,7 +355,7 @@ export default function SlotDrum({
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
-                      padding: "0 12px",
+                      padding: "0 0.6vw",
                       userSelect: "none",
                     }}
                   >
