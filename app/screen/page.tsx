@@ -75,6 +75,97 @@ function WaitingScreen({
   );
 }
 
+// ── Players Ready screen ────────────────────────────────────────────────────────
+
+function PlayersReadyScreen({ players }: { players: string[] }) {
+  return (
+    <div className="flex flex-col items-center min-h-screen bg-black">
+      <img src="/logos/accenture.svg" />
+      <div className="flex-1 flex flex-col items-center justify-center gap-[4vh]">
+        <p
+          className="font-black text-[#A100FF] uppercase tracking-[0.15em] leading-none"
+          style={{ fontSize: "2.5vw" }}
+        >
+          Today&apos;s Contestants
+        </p>
+        <div className="flex flex-col items-center gap-[2.5vh] mt-[2vh]">
+          {players.map((name, i) => (
+            <div
+              key={name}
+              className="flex items-center gap-[2vw]"
+              style={{ animation: `fadeInName 0.5s ease-out ${i * 0.18}s both` }}
+            >
+              <span
+                className="font-bold text-[#A100FF]"
+                style={{ fontSize: "2.5vw", width: "3vw", textAlign: "right" }}
+              >
+                {i + 1}.
+              </span>
+              <span
+                className="font-black text-white"
+                style={{ fontSize: "5vw" }}
+              >
+                {name}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <style>{`
+        @keyframes fadeInName {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+// ── Next Round screen ───────────────────────────────────────────────────────────
+
+const ROUND_DIFFICULTY: Record<number, string> = {
+  1: "Easy",
+  2: "Medium",
+  3: "Hard",
+};
+
+const ROUND_COLOR: Record<number, string> = {
+  1: "#4ade80",   // green
+  2: "#fbbf24",   // amber
+  3: "#f87171",   // red
+};
+
+function NextRoundScreen({ round }: { round: number }) {
+  const difficulty = ROUND_DIFFICULTY[round] ?? "—";
+  const color = ROUND_COLOR[round] ?? "#ffffff";
+
+  return (
+    <div className="flex flex-col items-center min-h-screen bg-black">
+      <img src="/logos/accenture.svg" />
+      <div className="flex-1 flex flex-col items-center justify-center gap-[3vh]">
+        <p
+          className="font-black text-[#666666] uppercase tracking-[0.2em]"
+          style={{ fontSize: "2vw" }}
+        >
+          Get Ready
+        </p>
+        <p
+          className="font-black text-white uppercase tracking-[0.08em] leading-none"
+          style={{ fontSize: "8vw" }}
+        >
+          Round {round}
+        </p>
+        <p
+          className="font-black uppercase tracking-[0.15em]"
+          style={{ fontSize: "4vw", color }}
+        >
+          {difficulty}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ── Intermission ───────────────────────────────────────────────────────────────
 
 function IntermissionScreen() {
@@ -148,7 +239,7 @@ function WheelPhaseScreen() {
         }}
       >
         <p className="text-[3vw] font-extrabold text-[#A100FF] tracking-widest uppercase">
-          🎡 Who's Playing Tonight?
+          🎡 Who's Playing Today?
         </p>
       </div>
 
@@ -684,6 +775,7 @@ function GameScreen({
     usedLifelines,
     showTrapAnswer,
   } = useGameStore();
+  const contestantLifelines = usedLifelines[currentContestant ?? ""] ?? [];
   console.log(showTrapAnswer);
   if (!activeQuestion) return null;
   return (
@@ -697,7 +789,7 @@ function GameScreen({
             { label: "50:50", emoji: "✂️", id: "5050" },
             { label: "AI Colleague", emoji: "🤖", id: "ai" },
           ].map(({ label, emoji, id }) => {
-            const used = usedLifelines.includes(id);
+            const used = contestantLifelines.includes(id);
 
             return (
               <div
@@ -1053,7 +1145,14 @@ function ReinventorsScreen({ names }: { names: string[] }) {
           className="font-black text-white uppercase tracking-widest"
           style={{ fontSize: "4vw" }}
         >
-          YOU ARE BOTH
+          CONGRATULATIONS
+        </p>
+
+        <p
+          className="font-black text-white uppercase tracking-widest"
+          style={{ fontSize: "3vw" }}
+        >
+          YOU ARE
         </p>
 
         <p
@@ -1070,27 +1169,6 @@ function ReinventorsScreen({ names }: { names: string[] }) {
           </svg>
           <span style={{ color: "white" }}>VENTORS!</span>
         </p>
-
-        <div className="reinventor-names flex items-center gap-[3vw] mt-[1vh]">
-          {names.map((name, i) => (
-            <span key={name} className="flex items-center gap-[3vw]">
-              {i > 0 && (
-                <span
-                  className="font-black text-white"
-                  style={{ fontSize: "4vw" }}
-                >
-                  &amp;
-                </span>
-              )}
-              <span
-                className="font-black"
-                style={{ fontSize: "5vw", color: "#A100FF" }}
-              >
-                {name}
-              </span>
-            </span>
-          ))}
-        </div>
       </div>
     </div>
   );
@@ -1127,6 +1205,8 @@ export default function ScreenPage() {
     currentContestant,
     winnerName,
     reinventors,
+    selectedPlayers,
+    upcomingRound,
     activeQuestion,
     revealAnswer,
     playerAnswer,
@@ -1164,6 +1244,10 @@ export default function ScreenPage() {
     );
   } else if (phase === "idle" || phase === "spinning" || phase === "reveal") {
     screen = <WheelPhaseScreen />;
+  } else if (phase === "playersReady") {
+    screen = <PlayersReadyScreen players={selectedPlayers} />;
+  } else if (phase === "nextRound") {
+    screen = <NextRoundScreen round={upcomingRound} />;
   } else if (phase === "selected") {
     screen = <SelectedScreen contestant={currentContestant} />;
   } else if (phase === "quiz") {

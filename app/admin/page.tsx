@@ -18,6 +18,8 @@ const PHASE_BADGE: Record<string, string> = {
   spinning: "bg-[#A100FF]/20 text-[#A100FF]",
   selected: "bg-[#A100FF]/20 text-[#A100FF]",
   reveal: "bg-[#A100FF]/30 text-white",
+  playersReady: "bg-[#A100FF]/40 text-white",
+  nextRound: "bg-amber-800 text-amber-200",
   quiz: "bg-green-800 text-green-200",
   done: "bg-[#333] text-white",
   reinventors: "bg-yellow-600 text-white",
@@ -59,8 +61,13 @@ export default function AdminPage() {
     screenVisible,
     spinRound,
     skipReveal,
+    beginRound,
+    showNextRound,
     showReinventors,
+    upcomingRound,
   } = useGameStore();
+
+  const contestantLifelines = usedLifelines[currentContestant ?? ""] ?? [];
 
   const [winner1, setWinner1] = useState(
     PLAYERS.find((p) => p.id === WINNERS[0])?.name ?? ""
@@ -74,7 +81,7 @@ export default function AdminPage() {
   };
 
   const handleLifeline = (id: string, action: () => void) => {
-    if (usedLifelines.includes(id)) return;
+    if (contestantLifelines.includes(id)) return;
     action();
   };
 
@@ -166,6 +173,34 @@ export default function AdminPage() {
                 className="px-4 py-3 bg-[#1A1A1A] hover:bg-[#333] border border-[#555] rounded-lg text-md font-bold transition-colors"
               >
                 ⏭ Skip Reveal
+              </button>
+            </div>
+          )}
+
+          {phase === "playersReady" && (
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-[#A100FF] font-bold">
+                All 4 players selected!
+              </span>
+              <button
+                onClick={startQuiz}
+                className="px-4 py-3 bg-[#A100FF] hover:bg-[#8800dd] rounded-lg text-md font-bold transition-colors"
+              >
+                🎮 Start Quiz
+              </button>
+            </div>
+          )}
+
+          {phase === "nextRound" && (
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-amber-300 font-bold">
+                Round {upcomingRound} — {["Easy", "Medium", "Hard"][upcomingRound - 1]} interstitial showing on screen
+              </span>
+              <button
+                onClick={beginRound}
+                className="px-4 py-3 bg-amber-600 hover:bg-amber-500 rounded-lg text-md font-bold transition-colors"
+              >
+                ▶ Begin Round {upcomingRound}
               </button>
             </div>
           )}
@@ -342,7 +377,7 @@ export default function AdminPage() {
                   { id: "5050", label: "50/50", action: use5050 },
                   { id: "ai", label: "🤖 AI", action: useLifelineAI },
                 ].map(({ id, label, action }) => {
-                  const used = usedLifelines.includes(id);
+                  const used = contestantLifelines.includes(id);
                   return (
                     <button
                       key={id}
@@ -451,7 +486,20 @@ export default function AdminPage() {
           <p className="text-xs text-[#666] uppercase tracking-widest mb-3">
             Manual Controls
           </p>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 mr-2">
+              <span className="text-xs text-[#666] uppercase tracking-widest">Round screens:</span>
+              {[1, 2, 3].map((r) => (
+                <button
+                  key={r}
+                  onClick={() => showNextRound(r)}
+                  className="px-3 py-2 bg-amber-800 hover:bg-amber-700 rounded-lg text-xs font-bold transition-colors"
+                >
+                  Round {r} — {["Easy", "Medium", "Hard"][r - 1]}
+                </button>
+              ))}
+            </div>
+            <div className="w-px h-8 bg-[#333]" />
             <input
               value={winner1}
               onChange={(e) => setWinner1(e.target.value)}

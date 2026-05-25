@@ -6,6 +6,8 @@ export type Phase =
   | "spinning"
   | "selected"
   | "reveal"
+  | "playersReady"
+  | "nextRound"
   | "quiz"
   | "intermission"
   | "done"
@@ -32,7 +34,8 @@ export interface GameData {
   aiWrongAnswer: number | null;
   hiddenAnswers: number[];
   showTrapAnswer: boolean;
-  usedLifelines: string[];
+  usedLifelines: Record<string, string[]>;
+  upcomingRound: number;
   winnerName: string | null;
   reinventors: string[];
   raffleQueue: string[];
@@ -55,6 +58,8 @@ interface GameActions {
   nextPlayer: () => void;
   readyForNextSpin: () => void;
   startQuiz: () => void;
+  beginRound: () => void;
+  showNextRound: (round: number) => void;
   resetGame: () => void;
   useLifelineAI: () => void;
   use5050: () => void;
@@ -81,7 +86,8 @@ const initialData: GameData = {
   aiWrongAnswer: null,
   hiddenAnswers: [],
   showTrapAnswer: false,
-  usedLifelines: [],
+  usedLifelines: {},
+  upcomingRound: 1,
   winnerName: null,
   reinventors: [],
   raffleQueue: PLAYERS.map((p) => p.name),
@@ -123,6 +129,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!curr.wheelSpinning) return;
     const winner = curr.raffleQueue[curr.raffleIndex];
     const nextIndex = curr.raffleIndex + 1;
+    const allSelected = nextIndex >= curr.raffleQueue.length;
+
     set({
       wheelSpinning: false,
       currentContestant: winner,
@@ -130,11 +138,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
       spinRound: curr.spinRound + 1,
       raffleIndex: nextIndex,
       phase: "reveal",
+      // Initialise this player's lifeline record
+      usedLifelines: { ...curr.usedLifelines, [winner]: curr.usedLifelines[winner] ?? [] },
     });
+
     setTimeout(() => {
-      const updated = get();
-      set({ phase: "idle" });
-      if (updated.raffleIndex < updated.raffleQueue.length) {
+      if (allSelected) {
+        set({ phase: "playersReady" });
+      } else {
+        set({ phase: "idle" });
         setTimeout(() => get().spinOnce(), POST_SPIN_IDLE_DELAY);
       }
     }, BETWEEN_SPIN_DELAY);
@@ -170,7 +182,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   revealCurrentAnswer: () => set({ revealAnswer: true }),
 
   markCorrect: () => {
-    const { activeQuestion, selectedPlayers, eliminated } = get();
+    const { activeQuestion } = get();
     if (activeQuestion?.round === 3) {
       set({
         phase: "reinventors",
@@ -183,11 +195,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
         aiThinking: false,
         aiReveal: false,
         aiWrongAnswer: null,
-        usedLifelines: [],
       });
     } else {
+      // Show next-round interstitial with the upcoming round number
+      const nextRound = (activeQuestion?.round ?? 1) + 1;
       set({
-        phase: "intermission",
+        phase: "nextRound",
+        upcomingRound: nextRound,
         activeQuestion: null,
         playerAnswer: null,
         revealAnswer: false,
@@ -196,7 +210,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
         aiThinking: false,
         aiReveal: false,
         aiWrongAnswer: null,
-        usedLifelines: [],
       });
     }
   },
@@ -213,7 +226,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       phase: "done",
       hiddenAnswers: [],
       showTrapAnswer: false,
-      usedLifelines: [],
       aiThinking: false,
       aiReveal: false,
       aiWrongAnswer: null,
@@ -231,7 +243,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       revealAnswer: false,
       hiddenAnswers: [],
       showTrapAnswer: false,
-      usedLifelines: [],
       aiThinking: false,
       aiReveal: false,
       aiWrongAnswer: null,
@@ -239,13 +250,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   readyForNextSpin: () => set({ phase: "idle" }),
 
-  startQuiz: () => set((state) => ({ ...state, phase: "intermission" })),
+  // Transitions from playersReady → nextRound (round 1) before the first question
+  startQuiz: () => set({ phase: "nextRound", upcomingRound: 1 }),
+
+  // Transitions from nextRound → intermission so host can pick a question
+  beginRound: () => set({ phase: "intermission" }),
+
+  // Manually jump to any round interstitial screen
+  showNextRound: (round: number) => set({ phase: "nextRound", upcomingRound: round }),
 
   resetGame: () => set(initialData),
 
   useLifelineAI: () => {
     const state = get();
-    if (state.usedLifelines.includes("ai")) return;
+    const contestant = state.currentContestant ?? "";
+    const contestantLifelines = state.usedLifelines[contestant] ?? [];
+    if (contestantLifelines.includes("ai")) return;
+
     const correct = state.activeQuestion?.correct ?? 0;
     const wrongOptions = [0, 1, 2, 3].filter((i) => i !== correct);
     const aiWrongAnswer =
@@ -254,7 +275,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       aiThinking: true,
       aiReveal: false,
       aiWrongAnswer,
-      usedLifelines: [...state.usedLifelines, "ai"],
+      usedLifelines: {
+        ...state.usedLifelines,
+        [contestant]: [...contestantLifelines, "ai"],
+      },
     });
     setTimeout(() => set({ aiThinking: false, aiReveal: true }), 4000);
   },
@@ -262,7 +286,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   use5050: () =>
     set((state) => {
       if (!state.activeQuestion) return state;
-      if (state.usedLifelines.includes("5050")) return state;
+      const contestant = state.currentContestant ?? "";
+      const contestantLifelines = state.usedLifelines[contestant] ?? [];
+      if (contestantLifelines.includes("5050")) return state;
 
       const correct = state.activeQuestion.correct;
       const wrongIndexes = [0, 1, 2, 3].filter((i) => i !== correct);
@@ -271,7 +297,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       return {
         ...state,
-        usedLifelines: [...state.usedLifelines, "5050"],
+        usedLifelines: {
+          ...state.usedLifelines,
+          [contestant]: [...contestantLifelines, "5050"],
+        },
         hiddenAnswers: toHide,
       };
     }),

@@ -35,7 +35,7 @@ interface UseScreenAudioOptions {
   playerAnswer: number | null;
   currentQuestionCorrect: number;
   currentLevel: number;
-  usedLifelines: string[];
+  usedLifelines: Record<string, string[]>;
   audioEnabled: boolean;
 }
 
@@ -70,7 +70,7 @@ export function useScreenAudio({
   const fadeTimeoutRef = useRef<number | null>(null);
   const loadPromiseRef = useRef<Promise<void> | null>(null);
   const lastRevealRef = useRef<boolean>(false);
-  const lastLifelineCountRef = useRef<number>(usedLifelines.length);
+  const lastLifelineCountRef = useRef<number>(Object.values(usedLifelines).flat().length);
   const lastPhaseRef = useRef<Phase>(phase);
   const startPlayedRef = useRef(false);
   const mountedRef = useRef(true);
@@ -242,9 +242,10 @@ export function useScreenAudio({
       void playBackgroundMusic("spinLoop", 0.25);
     } else if (phase === "spinning") {
       void playBackgroundMusic("spinLoop", 1);
-    } else if (phase === "quiz") {
+    } else if (phase === "quiz" || phase === "nextRound") {
       void playBackgroundMusic("quizLoop", 1);
     } else {
+      // playersReady, intermission, done, winner, reinventors — no music
       fadeOutBackgroundMusic(0.5);
     }
 
@@ -289,9 +290,10 @@ export function useScreenAudio({
   }, [revealAnswer, playerAnswer, currentQuestionCorrect, currentLevel]);
 
   useEffect(() => {
-    if (usedLifelines.length > lastLifelineCountRef.current) {
+    const totalLifelines = Object.values(usedLifelines).flat().length;
+    if (totalLifelines > lastLifelineCountRef.current) {
       void playEffect("lifeline");
     }
-    lastLifelineCountRef.current = usedLifelines.length;
+    lastLifelineCountRef.current = totalLifelines;
   }, [usedLifelines]);
 }

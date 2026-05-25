@@ -31,6 +31,7 @@ export function useBroadcastSync(role: "admin" | "screen") {
           hiddenAnswers: state.hiddenAnswers,
           showTrapAnswer: state.showTrapAnswer,
           usedLifelines: state.usedLifelines,
+          upcomingRound: state.upcomingRound,
           winnerName: state.winnerName,
           reinventors: state.reinventors,
           raffleQueue: state.raffleQueue,
