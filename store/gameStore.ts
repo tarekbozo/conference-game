@@ -292,8 +292,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
       const correct = state.activeQuestion.correct;
       const wrongIndexes = [0, 1, 2, 3].filter((i) => i !== correct);
-      const shuffled = wrongIndexes.sort(() => Math.random() - 0.5);
-      const toHide = [shuffled[0], shuffled[1]];
+
+      let keep: number;
+      if (state.activeQuestion.fiftyFiftyKeep !== undefined) {
+        keep = state.activeQuestion.fiftyFiftyKeep;
+      } else {
+        const shuffled = wrongIndexes.sort(() => Math.random() - 0.5);
+        keep = shuffled[0];
+      }
+
+      const toHide = wrongIndexes.filter((i) => i !== keep);
 
       return {
         ...state,
